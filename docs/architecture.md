@@ -1,0 +1,3 @@
+# Arquitetura
+
+Documentação em construção.

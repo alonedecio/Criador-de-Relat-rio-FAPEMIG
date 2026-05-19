@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ titulo }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 32px;
+      color: #222;
+    }
+    h1, h2, h3 {
+      margin-bottom: 8px;
+    }
+    .box {
+      border: 1px solid #bbb;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+    }
+    .meta {
+      margin-top: 24px;
+      padding: 16px;
+      border: 1px solid #999;
+    }
+    .atividade {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f7f7f7;
+      border-left: 4px solid #666;
+    }
+    .muted {
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>{{ titulo }}</h1>
+
+  <div class="box">
+    <h2>Resumo estrutural</h2>
+    <p><strong>Total de metas:</strong> {{ total_metas }}</p>
+    <p><strong>Total de atividades:</strong> {{ total_atividades }}</p>
+  </div>
+
+  <div class="box">
+    <h2>Metadata</h2>
+    <pre>{{ metadata }}</pre>
+  </div>
+
+  {% for meta in metas %}
+  <section class="meta">
+    <h2>{{ meta.item }}. {{ meta.meta }}</h2>
+    <p class="muted">
+      Meta ID: {{ meta.metaidoriginal }} |
+      Previsto médio: {{ meta.progressocalculadometa.previstopercentualmedio }} |
+      Realizado médio: {{ meta.progressocalculadometa.realizadopercentualmedio }}
+    </p>
+
+    {% for atividade in meta.atividades[:3] %}
+    <div class="atividade">
+      <h3>Atividade {{ atividade.numeroatividade }} - {{ atividade.titulo }}</h3>
+      <p><strong>Status:</strong> {{ atividade.statusclickup }}</p>
+      <p><strong>Indicador físico:</strong> {{ atividade.indicadorfisico or "-" }}</p>
+      <p><strong>Previsto:</strong> {{ atividade.progressocalculado.previstopercentual }} |
+         <strong>Realizado:</strong> {{ atividade.progressocalculado.realizadopercentual }}</p>
+      <p><strong>Desenvolvimento:</strong> {{ atividade.desenvolvimento or "-" }}</p>
+      <p><strong>Resultados:</strong> {{ atividade.resultados or "-" }}</p>
+      <p><strong>Justificativa:</strong> {{ atividade.justificativa or "-" }}</p>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</body>
+</html>

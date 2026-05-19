@@ -1,0 +1,2445 @@
+{
+  "metadata": {
+    "source": "clickup_raw",
+    "task_count": 186
+  },
+  "resumo_projeto": {
+    "dados": {}
+  },
+  "metas": [
+    {
+      "item": "1",
+      "meta_id_original": "86adz6rgd",
+      "meta_nome": "Meta 1 - Estruturar CIEU",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86adz80ux",
+          "numero_atividade": "1.1",
+          "numero_atividade_original": "1.1",
+          "titulo": "1.1 - Definir layout, funcionalidades e especificações do CIEU.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1759302000000",
+            "data_fim": "1767682800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86adz80ux",
+            "parent_id": "86adz6rgd",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86adz80vg",
+          "numero_atividade": "1.2",
+          "numero_atividade_original": "1.2",
+          "titulo": "1.2 - Executar reformas e preparar o espaço físico do CIEU.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1759302000000",
+            "data_fim": "1772262000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86adz80vg",
+            "parent_id": "86adz6rgd",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86adz80wu",
+          "numero_atividade": "1.3",
+          "numero_atividade_original": "1.3",
+          "titulo": "1.3 - Realizar evento de inauguração e divulgar o espaço.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1759302000000",
+            "data_fim": "1772262000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86adz80wu",
+            "parent_id": "86adz6rgd",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "2",
+      "meta_id_original": "86adzzujk",
+      "meta_nome": "Meta 2 - Formalizar CIEU",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae104wy",
+          "numero_atividade": "2.1",
+          "numero_atividade_original": "2.1",
+          "titulo": "2.1 - Estabelecer as normas, estrutura organizacional e processos administrativos do CIEU.",
+          "indicador_fisico": null,
+          "status_clickup": "em progresso",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1759302000000",
+            "data_fim": "1759302000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae104wy",
+            "parent_id": "86adzzujk",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86adzzvfk",
+          "numero_atividade": "2.2",
+          "numero_atividade_original": "2.2",
+          "titulo": "2.2 - Submeter as normas e processos para aprovação da Diretoria de Parques e instâncias superiores da UFLA.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1759302000000",
+            "data_fim": "1759302000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86adzzvfk",
+            "parent_id": "86adzzujk",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "3",
+      "meta_id_original": "86ae00rkb",
+      "meta_nome": "Meta 3 - Capacitar a equipe interna",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae00tdw",
+          "numero_atividade": "3.1",
+          "numero_atividade_original": "3.1",
+          "titulo": "3.1 - Definir temas, metodologias e cronograma para as capacitações internas.",
+          "indicador_fisico": null,
+          "status_clickup": "concluído",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1759302000000",
+            "data_fim_realizado": "1769194978962"
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae00tdw",
+            "parent_id": "86ae00rkb",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae00tej",
+          "numero_atividade": "3.2",
+          "numero_atividade_original": "3.2",
+          "titulo": "3.2 - Realizar capacitação para 8 membros da equipe com foco em empreendedorismo e inovação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1756710000000",
+            "data_fim": "1769756400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae00tej",
+            "parent_id": "86ae00rkb",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae00tfg",
+          "numero_atividade": "3.3",
+          "numero_atividade_original": "3.3",
+          "titulo": "3.3 - Realizar capacitação para 8 membros da equipe com foco em gestão de projetos, gestão estratégica e ferramentas de gestão.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1756710000000",
+            "data_fim": "1774940400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae00tfg",
+            "parent_id": "86ae00rkb",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aentdpp",
+          "numero_atividade": "3.4",
+          "numero_atividade_original": "3.4",
+          "titulo": "3.4 - Participação em Seminários a serem realizados pela FAPEMIG e SEDE para monitoramento e avaliação.",
+          "indicador_fisico": null,
+          "status_clickup": "concluído",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1819782000000",
+            "data_fim": "1830236400000",
+            "data_fim_realizado": "1778597611371"
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aentdpp",
+            "parent_id": "86ae00rkb",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "4",
+      "meta_id_original": "86ae877y0",
+      "meta_nome": "Meta 4 - Capacitar público por trilha de formação (bootcamp)",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86aenthn2",
+          "numero_atividade": "4.1",
+          "numero_atividade_original": "4.1",
+          "titulo": "4.1 - Definir temas, cronograma e formato das trilhas de formação externas.",
+          "indicador_fisico": null,
+          "status_clickup": "concluído",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1772348400000",
+            "data_fim_realizado": "1777919050266"
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenthn2",
+            "parent_id": "86ae877y0",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenthw3",
+          "numero_atividade": "4.2",
+          "numero_atividade_original": "4.2",
+          "titulo": "4.2 - Realizar capacitações para 100 participantes externos na primeira fase do projeto.",
+          "indicador_fisico": null,
+          "status_clickup": "em progresso",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1790838000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenthw3",
+            "parent_id": "86ae877y0",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aentj0g",
+          "numero_atividade": "4.3",
+          "numero_atividade_original": "4.3",
+          "titulo": "4.3 - Realizar capacitações para mais 100 participantes externos na segunda fase do projeto.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1817017200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aentj0g",
+            "parent_id": "86ae877y0",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenttr1",
+          "numero_atividade": "4.4",
+          "numero_atividade_original": "4.4",
+          "titulo": "4.4 - Realizar capacitações para os últimos 100 participantes externos na terceira fase do projeto.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1830236400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenttr1",
+            "parent_id": "86ae877y0",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "5",
+      "meta_id_original": "86adz6raj",
+      "meta_nome": "Meta 5 - Organizar eventos temáticos",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86adz82ev",
+          "numero_atividade": "5.1",
+          "numero_atividade_original": "5.1",
+          "titulo": "5.1 - Planejar a execução dos 10 eventos, incluindo definição de temas, cronograma e recursos.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1777532400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86adz82ev",
+            "parent_id": "86adz6raj",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenu24k",
+          "numero_atividade": "5.2",
+          "numero_atividade_original": "5.2",
+          "titulo": "5.2 - Organizar e executar os 4 primeiros eventos temáticos no CIEU.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1798700400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenu24k",
+            "parent_id": "86adz6raj",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenu277",
+          "numero_atividade": "5.3",
+          "numero_atividade_original": "5.3",
+          "titulo": "5.3 - Organizar e executar 3 eventos adicionais, com foco em inovação e empreendedorismo.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1817017200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenu277",
+            "parent_id": "86adz6raj",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenu2aw",
+          "numero_atividade": "5.4",
+          "numero_atividade_original": "5.4",
+          "titulo": "5.4 - Organizar e executar os 3 últimos eventos do projeto, com foco em consolidação do impacto.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1830236400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenu2aw",
+            "parent_id": "86adz6raj",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "6",
+      "meta_id_original": "86ae2yjjv",
+      "meta_nome": "Meta 6 - Selecionar público para trilha de formação",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae877zf",
+          "numero_atividade": "6.1",
+          "numero_atividade_original": "6.1",
+          "titulo": "6.1 - Definir critérios, etapas e cronograma para as rodadas de seleção.",
+          "indicador_fisico": null,
+          "status_clickup": "concluído",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1772348400000",
+            "data_fim_realizado": "1770226080302"
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae877zf",
+            "parent_id": "86ae2yjjv",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae2ym6r",
+          "numero_atividade": "6.2",
+          "numero_atividade_original": "6.2",
+          "titulo": "6.2 - Realizar a 1ª rodada de seleção de propostas para pré-incubação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1782889200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae2ym6r",
+            "parent_id": "86ae2yjjv",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenuzt8",
+          "numero_atividade": "6.3",
+          "numero_atividade_original": "6.3",
+          "titulo": "6.3 - Realizar a 2ª rodada de seleção de propostas para pré-incubação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1793516400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenuzt8",
+            "parent_id": "86ae2yjjv",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenuztq",
+          "numero_atividade": "6.4",
+          "numero_atividade_original": "6.4",
+          "titulo": "6.4 - Realizar a 3ª rodada de seleção de propostas para pré-incubação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1803884400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenuztq",
+            "parent_id": "86ae2yjjv",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenuzu5",
+          "numero_atividade": "6.5",
+          "numero_atividade_original": "6.5",
+          "titulo": "6.5 - Realizar a 4ª rodada de seleção de propostas para pré-incubação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1814425200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenuzu5",
+            "parent_id": "86ae2yjjv",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aenuzup",
+          "numero_atividade": "6.6",
+          "numero_atividade_original": "6.6",
+          "titulo": "6.6 - Realizar a 5ª e última rodada de seleção de propostas para pré-incubação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1825052400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aenuzup",
+            "parent_id": "86ae2yjjv",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "7",
+      "meta_id_original": "86ae377cf",
+      "meta_nome": "Meta 7 - Conduzir mentorias com especialistas externos",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae377p9",
+          "numero_atividade": "7.1",
+          "numero_atividade_original": "7.1",
+          "titulo": "7.1 - Definir critérios, estrutura, cronograma e integração com a plataforma de gestão para o programa de mentoria.",
+          "indicador_fisico": null,
+          "status_clickup": "em progresso",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1769842800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae377p9",
+            "parent_id": "86ae377cf",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae3785d",
+          "numero_atividade": "7.2",
+          "numero_atividade_original": "7.2",
+          "titulo": "7.2 - Desenvolver e publicar edital para cadastro contínuo de mentores externos.",
+          "indicador_fisico": null,
+          "status_clickup": "em progresso",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1770188400000",
+            "data_fim": "1772348400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae3785d",
+            "parent_id": "86ae377cf",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae37dg4",
+          "numero_atividade": "7.3",
+          "numero_atividade_original": "7.3",
+          "titulo": "7.3 - Conduzir as 100 sessões de mentoria, disponibilizando acesso contínuo pela plataforma.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1833001200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae37dg4",
+            "parent_id": "86ae377cf",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "8",
+      "meta_id_original": "86ae37twh",
+      "meta_nome": "Meta 8 - Desenvolver 2 fluxos metodológicos formalizados (ideação e pré-incubação) até o 12º mês.",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae37vbc",
+          "numero_atividade": "8.1",
+          "numero_atividade_original": "8.1",
+          "titulo": "8.1 - Identificar boas práticas nacionais e internacionais em ideação e pré-incubação.",
+          "indicador_fisico": null,
+          "status_clickup": "em progresso",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1770188400000",
+            "data_fim": "1772348400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae37vbc",
+            "parent_id": "86ae37twh",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae37ven",
+          "numero_atividade": "8.2",
+          "numero_atividade_original": "8.2",
+          "titulo": "8.2 - Desenvolver e validar o fluxo metodológico da fase de ideação.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1780297200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae37ven",
+            "parent_id": "86ae37twh",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae37vj5",
+          "numero_atividade": "8.3",
+          "numero_atividade_original": "8.3",
+          "titulo": "8.3 - Desenvolver e validar o fluxo metodológico da fase de pré-incubação, considerando continuidade e suporte.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1788246000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae37vj5",
+            "parent_id": "86ae37twh",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "9",
+      "meta_id_original": "86ae385t3",
+      "meta_nome": "Meta 9 - Produzir 5 relatórios técnicos (incluindo diagnóstico inicial e final de impacto) ao longo do projeto",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86aer1t04",
+          "numero_atividade": "9.1",
+          "numero_atividade_original": "9.1",
+          "titulo": "9.1 - Realizar levantamento de dados sobre o ecossistema de inovação da UFLA (Diagnóstico inicial).",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1772348400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer1t04",
+            "parent_id": "86ae385t3",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer1t19",
+          "numero_atividade": "9.2",
+          "numero_atividade_original": "9.2",
+          "titulo": "9.2 - Produzir relatórios técnicos semestrais, detalhando os avanços e impactos das atividades do projeto.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1825052400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer1t19",
+            "parent_id": "86ae385t3",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer1t2a",
+          "numero_atividade": "9.3",
+          "numero_atividade_original": "9.3",
+          "titulo": "9.3 - Produzir um relatório final consolidando os impactos do projeto.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1835506800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer1t2a",
+            "parent_id": "86ae385t3",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "10",
+      "meta_id_original": "86ae00mc1",
+      "meta_nome": "Meta 10 - Elaborar Projeto Arquitetônico CiEU",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae00mzy",
+          "numero_atividade": "10.1",
+          "numero_atividade_original": "10.1",
+          "titulo": "10.1 - Identificar as necessidades funcionais do espaço do CIEU e definir diretrizes arquitetônicas.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1756710000000",
+            "data_fim": "1761980400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae00mzy",
+            "parent_id": "86ae00mc1",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae00n1e",
+          "numero_atividade": "10.2",
+          "numero_atividade_original": "10.2",
+          "titulo": "10.2 - Desenvolver o projeto arquitetônico detalhado (plantas, cortes e especificações).",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1756710000000",
+            "data_fim": "1761980400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae00n1e",
+            "parent_id": "86ae00mc1",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae00n2b",
+          "numero_atividade": "10.3",
+          "numero_atividade_original": "10.3",
+          "titulo": "10.3 - Submeter o projeto arquitetônico para aprovação pelas instâncias administrativas da UFLA.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": "1761980400000",
+            "data_fim": "1761980400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae00n2b",
+            "parent_id": "86ae00mc1",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "11",
+      "meta_id_original": "86ae38gj4",
+      "meta_nome": "Meta 11 - Criar e publicar 2 materiais didático-pedagógicos (guias para design thinking e modelagem de negócios) até o final do projeto.",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae38rp2",
+          "numero_atividade": "11.1",
+          "numero_atividade_original": "11.1",
+          "titulo": "11.1 - Definir conteúdos, formato e estrutura dos materiais didático-pedagógicos.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1793516400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae38rp2",
+            "parent_id": "86ae38gj4",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae38rrp",
+          "numero_atividade": "11.2",
+          "numero_atividade_original": "11.2",
+          "titulo": "11.2 - Elaborar e revisar o conteúdo do guia didático de design thinking.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1803884400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae38rrp",
+            "parent_id": "86ae38gj4",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae38rvr",
+          "numero_atividade": "11.3",
+          "numero_atividade_original": "11.3",
+          "titulo": "11.3 - Criar e revisar o conteúdo do guia didático de modelagem de negócios.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1814425200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae38rvr",
+            "parent_id": "86ae38gj4",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae38t1d",
+          "numero_atividade": "11.4",
+          "numero_atividade_original": "11.4",
+          "titulo": "11.4 - Finalizar, publicar e disponibilizar os materiais didático-pedagógicos.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1822374000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae38t1d",
+            "parent_id": "86ae38gj4",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "12",
+      "meta_id_original": "86ae3996r",
+      "meta_nome": "Meta 12  - Validar e desenvolver 2 protótipos na pré-incubação",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86aer22kf",
+          "numero_atividade": "12.1",
+          "numero_atividade_original": "12.1",
+          "titulo": "12.1 - Selecionar, dentre as propostas aprovadas, as ideias com maior potencial de impacto para desenvolvimento de protótipos.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1790838000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer22kf",
+            "parent_id": "86ae3996r",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer22kv",
+          "numero_atividade": "12.2",
+          "numero_atividade_original": "12.2",
+          "titulo": "12.2 - Conduzir a validação técnica, funcional e de mercado do primeiro protótipo selecionado.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1803884400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer22kv",
+            "parent_id": "86ae3996r",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer22m9",
+          "numero_atividade": "12.3",
+          "numero_atividade_original": "12.3",
+          "titulo": "12.3 - Concluir o desenvolvimento do Protótipo 1, incorporando melhorias.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1814425200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer22m9",
+            "parent_id": "86ae3996r",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer22mn",
+          "numero_atividade": "12.4",
+          "numero_atividade_original": "12.4",
+          "titulo": "12.4 - Conduzir a validação técnica, funcional e de mercado do segundo protótipo selecionado.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1822374000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer22mn",
+            "parent_id": "86ae3996r",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer22n7",
+          "numero_atividade": "12.5",
+          "numero_atividade_original": "12.5",
+          "titulo": "12.5 - Concluir o desenvolvimento do Protótipo 2, incorporando melhorias.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1801465200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer22n7",
+            "parent_id": "86ae3996r",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "13",
+      "meta_id_original": "86ae39m2g",
+      "meta_nome": "Meta 13 - Engajar no mínimo 10 núcleos de estudo nas ações do CIEU até o final do projeto.",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86aer28af",
+          "numero_atividade": "13.1",
+          "numero_atividade_original": "13.1",
+          "titulo": "13.1 - Identificar e mapear núcleos de estudo e empresas juniores da UFLA.",
+          "indicador_fisico": null,
+          "status_clickup": "concluído",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1777618800000",
+            "data_fim_realizado": "1770645596250"
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer28af",
+            "parent_id": "86ae39m2g",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer28b3",
+          "numero_atividade": "13.2",
+          "numero_atividade_original": "13.2",
+          "titulo": "13.2 - Definir estratégias de comunicação e ações específicas para atrair núcleos de estudo e empresas juniores.",
+          "indicador_fisico": null,
+          "status_clickup": "concluído",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1782889200000",
+            "data_fim_realizado": "1770645666104"
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer28b3",
+            "parent_id": "86ae39m2g",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer28bk",
+          "numero_atividade": "13.3",
+          "numero_atividade_original": "13.3",
+          "titulo": "13.3 - Realizar eventos e atividades específicas para atrair e engajar 10 núcleos de estudo e empresas juniores (1ª fase).",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1803884400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer28bk",
+            "parent_id": "86ae39m2g",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer28cd",
+          "numero_atividade": "13.4",
+          "numero_atividade_original": "13.4",
+          "titulo": "13.4 - Continuar as ações de engajamento, visando atrair e engajar mais 10 núcleos (2ª fase).",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1835506800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer28cd",
+            "parent_id": "86ae39m2g",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "14",
+      "meta_id_original": "86ae3bjj8",
+      "meta_nome": "Meta 14 - Estabelecer 5 parcerias estratégicas com empresas ou organizações externas até o 24º mês",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86aer2bjc",
+          "numero_atividade": "14.1",
+          "numero_atividade_original": "14.1",
+          "titulo": "14.1 - Identificar empresas e organizações externas com potencial para parcerias estratégicas.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1775026800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2bjc",
+            "parent_id": "86ae3bjj8",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer2bjr",
+          "numero_atividade": "14.2",
+          "numero_atividade_original": "14.2",
+          "titulo": "14.2 - Desenvolver estratégias de abordagem e propostas de parceria, incluindo objetivos e benefícios mútuos.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1782889200000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2bjr",
+            "parent_id": "86ae3bjj8",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer2bk5",
+          "numero_atividade": "14.3",
+          "numero_atividade_original": "14.3",
+          "titulo": "14.3 - Negociar e formalizar 3 parcerias estratégicas na primeira fase.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1803884400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2bk5",
+            "parent_id": "86ae3bjj8",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer2bkq",
+          "numero_atividade": "14.4",
+          "numero_atividade_original": "14.4",
+          "titulo": "14.4 - Negociar e formalizar as 2 parcerias finais para atingir a meta de 5.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1822374000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2bkq",
+            "parent_id": "86ae3bjj8",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "15",
+      "meta_id_original": "86ae3buue",
+      "meta_nome": "Meta 15 - Estabelecer o plano de sustentabilidade financeira do CIEU até o 24º mês",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86aer2qt7",
+          "numero_atividade": "15.1",
+          "numero_atividade_original": "15.1",
+          "titulo": "15.1 - Realizar levantamento do cenário financeiro e identificar fontes potenciais de receita.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1777618800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2qt7",
+            "parent_id": "86ae3buue",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer2qtk",
+          "numero_atividade": "15.2",
+          "numero_atividade_original": "15.2",
+          "titulo": "15.2 - Desenvolver estratégias para diversificação de receitas (cobrança por treinamentos, eventos, uso de espaços).",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1790838000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2qtk",
+            "parent_id": "86ae3buue",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer2qu4",
+          "numero_atividade": "15.3",
+          "numero_atividade_original": "15.3",
+          "titulo": "15.3 - Implementar e testar estratégias de sustentabilidade piloto.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1809154800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2qu4",
+            "parent_id": "86ae3buue",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86aer2qup",
+          "numero_atividade": "15.4",
+          "numero_atividade_original": "15.4",
+          "titulo": "15.4 - Ajustar o plano de sustentabilidade com base nas estratégias piloto, formalizando o documento final.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1822374000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86aer2qup",
+            "parent_id": "86ae3buue",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    },
+    {
+      "item": "16",
+      "meta_id_original": "86ae3bz49",
+      "meta_nome": "Meta 16 - Estabelecer uma trilha de formação específica para 10 Empresas Júnior, fortalecendo suas ações e ampliando o efeito multiplicador do CIEU",
+      "percentual_meta": null,
+      "atividades": [
+        {
+          "atividade_id": "86ae3c0ry",
+          "numero_atividade": "16.1",
+          "numero_atividade_original": "16.1",
+          "titulo": "16.1 - Realizar um diagnóstico das dores das empresas júnior da UFLA.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1777618800000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae3c0ry",
+            "parent_id": "86ae3bz49",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae3c0vy",
+          "numero_atividade": "16.2",
+          "numero_atividade_original": "16.2",
+          "titulo": "16.2 - Desenvolver uma trilha de capacitação focada nas demandas das Empresas Júnior.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1790838000000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae3c0vy",
+            "parent_id": "86ae3bz49",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        },
+        {
+          "atividade_id": "86ae3c0ye",
+          "numero_atividade": "16.3",
+          "numero_atividade_original": "16.3",
+          "titulo": "16.3 - Avaliação das ações de capacitação com as Empresas Júnior.",
+          "indicador_fisico": null,
+          "status_clickup": "pendente",
+          "percentual_realizado": null,
+          "datas": {
+            "data_inicio": null,
+            "data_fim": "1825052400000",
+            "data_fim_realizado": null
+          },
+          "progresso": {
+            "atrasada": null,
+            "situacao_prazo": null,
+            "duracao_prevista_dias": null,
+            "duracao_efetiva_dias": null,
+            "mes_ano_inicio_previsto": null,
+            "mes_ano_fim_previsto": null,
+            "mes_ano_inicio_real": null,
+            "mes_ano_fim_real": null,
+            "previsto_percentual": null,
+            "realizado_percentual": null
+          },
+          "texto": {
+            "desenvolvimento": "",
+            "resultados": "",
+            "justificativa": ""
+          },
+          "origem": {
+            "source": "clickup_raw",
+            "task_id": "86ae3c0ye",
+            "parent_id": "86ae3bz49",
+            "list_id": "901323380760",
+            "custom_fields": {}
+          }
+        }
+      ],
+      "progresso": {
+        "previsto_percentual_medio": null,
+        "realizado_percentual_medio": null
+      }
+    }
+  ]
+}

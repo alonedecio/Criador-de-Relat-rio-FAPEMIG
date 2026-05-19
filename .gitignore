@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+
+# Output local (estrutura versionada via .gitkeep)
+output/*
+!output/.gitkeep
+
+# Dados locais: versione apenas .gitkeep nas pastas; ignore o restante
+data/**/*
+!data/**/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
