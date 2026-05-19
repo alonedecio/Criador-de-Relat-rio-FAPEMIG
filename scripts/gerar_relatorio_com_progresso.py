@@ -1,8 +1,13 @@
 """
 Gera relatorio_final_com_progresso.json
 
-Lê o relatório canônico + enriched snapshot do ClickUp,
-monta contextos com progresso calculado e exporta JSON final.
+Fluxo correto:
+  1. Lê o clickup_enriched_snapshot.json (fonte única de verdade)
+  2. Constrói o RelatorioCanonico via mapper.py (extrai metas/atividades do nome das tasks)
+  3. Monta EnrichedIndex indexado por código "N.N" (extraído do base.name)
+  4. Roda MontarContextosUseCase → calcula progresso e preenche datas
+  5. Injeta resultado de volta no relatório canônico
+  6. Exporta relatorio_final_com_progresso.json
 
 Rodar: python -m scripts.gerar_relatorio_com_progresso
 """
@@ -10,11 +15,12 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
+from app.domain.clickup.mapper import to_report_base_from_clickup
 from app.domain.clickup.models import ClickUpEnrichedSnapshot, ClickUpTaskEnriched
 from app.application.use_cases.montar_contextos import EnrichedIndex, MontarContextosUseCase
-from app.domain.reporting.canonical_schemas import RelatorioCanonico
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,73 +30,91 @@ logger = logging.getLogger(__name__)
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 
-RELATORIO_PATH = Path("data/staged/relatorio_com_progresso_clickup_api.json")
-SNAPSHOT_PATH  = Path("data/staged/clickup_enriched_snapshot.json")
-OUTPUT_PATH    = Path("data/output/relatorio_final_com_progresso.json")
+SNAPSHOT_PATH = Path("data/input/clickup_enriched_snapshot.json")
+OUTPUT_PATH   = Path("data/output/relatorio_final_com_progresso.json")
+
+_RE_CODIGO = re.compile(r"^(\d+\.\d+)")
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-def _carregar_relatorio(path: Path) -> RelatorioCanonico:
-    logger.info("Carregando relatório: %s", path)
-    return RelatorioCanonico.model_validate(json.loads(path.read_text(encoding="utf-8")))
-
-
-def _carregar_index(path: Path) -> EnrichedIndex:
+def _carregar_snapshot(path: Path) -> tuple[dict, list[ClickUpTaskEnriched]]:
     """
-    Monta EnrichedIndex indexado por código de atividade (ex: '1.1').
+    Lê o snapshot e devolve (raw_dict, lista de ClickUpTaskEnriched).
 
-    O snapshot pode estar em dois formatos:
-      1. {"metadata": ..., "tasks": [...]}  → ClickUpEnrichedSnapshot
-      2. {"abc123": {...task...}, ...}       → dict flat por task_id
-
-    Em ambos os casos, tentamos usar o campo 'name' da task como código,
-    extraindo o padrão N.N do início do nome (ex: '1.2 - Título' → '1.2').
+    Suporta dois formatos:
+      1. {"metadata": ..., "tasks": [...]}   → envelope ClickUpEnrichedSnapshot
+      2. {"task_id": {...}, ...}              → dict flat por task_id (formato legado)
     """
-    import re
-    logger.info("Carregando enriched snapshot: %s", path)
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    logger.info("Carregando snapshot: %s", path)
+    raw: dict = json.loads(path.read_text(encoding="utf-8"))
 
     tasks: list[ClickUpTaskEnriched] = []
 
     if isinstance(raw, dict) and "tasks" in raw:
         snapshot = ClickUpEnrichedSnapshot.model_validate(raw)
         tasks = snapshot.tasks
+        logger.info("Formato: envelope ClickUpEnrichedSnapshot — %d tasks", len(tasks))
     elif isinstance(raw, dict):
-        # formato flat: chave = task_id, valor = objeto da task
+        # formato flat legado: chave = task_id
         for tid, tdata in raw.items():
-            if isinstance(tdata, dict):
-                # garante que task_id está presente
-                tdata.setdefault("task_id", tid)
-                if "base" not in tdata and "id" not in tdata:
-                    continue
-                try:
-                    tasks.append(ClickUpTaskEnriched.model_validate(tdata))
-                except Exception:
-                    pass
-    elif isinstance(raw, list):
-        for tdata in raw:
+            if not isinstance(tdata, dict):
+                continue
+            tdata.setdefault("task_id", tid)
+            if "base" not in tdata:
+                continue
             try:
                 tasks.append(ClickUpTaskEnriched.model_validate(tdata))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("task %s ignorada: %s", tid, exc)
+        logger.info("Formato: dict flat legado — %d tasks carregadas", len(tasks))
+    else:
+        logger.warning("Formato de snapshot não reconhecido.")
 
-    # indexa por código extraído do nome (padrão "N.N" no início)
-    _RE_CODIGO = re.compile(r"^(\d+\.\d+)")
+    return raw, tasks
+
+
+def _montar_payload_para_mapper(tasks: list[ClickUpTaskEnriched]) -> dict:
+    """
+    O mapper.py espera {"tasks": [dict bruto]}.
+    Reconstrói esse payload a partir das tasks enriquecidas usando os campos de base.
+    """
+    task_dicts = []
+    for t in tasks:
+        b = t.base
+        d = b.model_dump()
+        # garante que campos de lista/hierarquia estejam presentes
+        d["id"]             = t.task_id
+        d["name"]           = b.name
+        d["parent"]         = b.parent
+        d["toplevelparent"] = b.toplevelparent
+        d["status"]         = b.status
+        d["startdate"]      = b.startdate
+        d["duedate"]        = b.duedate
+        d["datedone"]       = b.datedone
+        d["custom_fields"]  = t.customfields or b.customfields or []
+        task_dicts.append(d)
+    return {"tasks": task_dicts}
+
+
+def _montar_index(tasks: list[ClickUpTaskEnriched]) -> EnrichedIndex:
+    """
+    Indexa tasks por código de atividade extraído do nome (padrão "N.N").
+    Ex: "1.2 - Capacitação da equipe" → chave "1.2"
+    """
     index: dict[str, ClickUpTaskEnriched] = {}
     sem_codigo = 0
 
     for task in tasks:
-        nome = task.base.name or ""
-        m = _RE_CODIGO.match(nome.strip())
+        nome = (task.base.name or "").strip()
+        m = _RE_CODIGO.match(nome)
         if m:
-            codigo = m.group(1)
-            index[codigo] = task
+            index[m.group(1)] = task
         else:
             sem_codigo += 1
 
     logger.info(
-        "EnrichedIndex: %d tasks indexadas por código, %d sem código extraível",
+        "EnrichedIndex: %d atividades indexadas por código, %d tasks sem código (metas/outros)",
         len(index), sem_codigo,
     )
     return EnrichedIndex(task_por_codigo=index)
@@ -99,15 +123,27 @@ def _carregar_index(path: Path) -> EnrichedIndex:
 # ── pipeline ──────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    relatorio = _carregar_relatorio(RELATORIO_PATH)
-    index     = _carregar_index(SNAPSHOT_PATH)
+    # 1. carrega snapshot
+    raw, tasks = _carregar_snapshot(SNAPSHOT_PATH)
 
+    # 2. constrói relatório canônico via mapper (extrai metas e atividades)
+    payload   = _montar_payload_para_mapper(tasks)
+    relatorio = to_report_base_from_clickup(payload)
+    logger.info(
+        "Relatório canônico: %d metas, %d atividades totais",
+        len(relatorio.metas),
+        sum(len(m.atividades) for m in relatorio.metas),
+    )
+
+    # 3. monta índice enriquecido por código
+    index = _montar_index(tasks)
+
+    # 4. monta contextos + calcula progresso
     uc        = MontarContextosUseCase()
     resultado = uc.executar(relatorio, index, projeto_pdf=None)
-
     logger.info(resultado.resumo())
 
-    # ── injeta progresso e datas calculadas de volta no relatório canônico ──
+    # 5. injeta progresso e datas no relatório canônico
     ctx_by_codigo = {c.codigo: c for c in resultado.contextos}
 
     for meta in relatorio.metas:
@@ -121,26 +157,22 @@ def main() -> None:
             if not ctx:
                 continue
 
-            # datas
             if ctx.data_inicio:
                 atv.datas.data_inicio = ctx.data_inicio.isoformat()
             if ctx.data_fim:
                 atv.datas.data_fim = ctx.data_fim.isoformat()
-
-            # progresso
             if ctx.progresso:
                 atv.progresso = ctx.progresso
 
-    # ── exporta ──────────────────────────────────────────────────────────────
+    # 6. exporta JSON final
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(
         relatorio.model_dump_json(indent=2),
         encoding="utf-8",
     )
-
     logger.info("JSON final gerado em: %s", OUTPUT_PATH)
 
-    # ── diagnóstico resumido ──────────────────────────────────────────────────
+    # ── diagnóstico no terminal ───────────────────────────────────────────────
     print("\n" + "=" * 60)
     print(resultado.resumo())
     print("=" * 60)
@@ -159,7 +191,7 @@ def main() -> None:
         print()
 
     if resultado.codigos_sem_dados:
-        print(f"Sem dados ({len(resultado.codigos_sem_dados)}):")
+        print(f"Sem dados suficientes ({len(resultado.codigos_sem_dados)}):")
         for c in resultado.codigos_sem_dados:
             print(f"  - {c}")
 
