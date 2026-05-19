@@ -5,9 +5,10 @@ Fluxo correto:
   1. Lê o clickup_enriched_snapshot.json (fonte única de verdade)
   2. Constrói o RelatorioCanonico via mapper.py (extrai metas/atividades do nome das tasks)
   3. Monta EnrichedIndex indexado por código "N.N" (extraído do base.name)
-  4. Roda MontarContextosUseCase → calcula progresso e preenche datas
-  5. Injeta resultado de volta no relatório canônico
-  6. Exporta relatorio_final_com_progresso.json
+  4. Carrega PDF do projeto e extrai datas de cada atividade
+  5. Roda MontarContextosUseCase → calcula progresso e preenche datas
+  6. Injeta resultado de volta no relatório canônico
+  7. Exporta relatorio_final_com_progresso.json
 
 Rodar: python -m scripts.gerar_relatorio_com_progresso
 """
@@ -20,6 +21,8 @@ from pathlib import Path
 
 from app.domain.clickup.mapper import to_report_base_from_clickup
 from app.domain.clickup.models import ClickUpEnrichedSnapshot, ClickUpTaskEnriched
+from app.domain.projects.pdf_reader import ler_pdf_projeto
+from app.domain.projects.pdf_extractor import extrair_projeto
 from app.application.use_cases.montar_contextos import EnrichedIndex, MontarContextosUseCase
 
 logging.basicConfig(
@@ -31,6 +34,7 @@ logger = logging.getLogger(__name__)
 # ── paths ─────────────────────────────────────────────────────────────────────
 
 SNAPSHOT_PATH = Path("data/input/clickup_enriched_snapshot.json")
+PDF_PATH      = Path("data/input/termo_projeto.pdf")
 OUTPUT_PATH   = Path("data/output/relatorio_final_com_progresso.json")
 
 _RE_CODIGO = re.compile(r"^(\d+\.\d+)")
@@ -72,6 +76,28 @@ def _carregar_snapshot(path: Path) -> tuple[dict, list[ClickUpTaskEnriched]]:
         logger.warning("Formato de snapshot não reconhecido.")
 
     return raw, tasks
+
+
+def _carregar_pdf(path: Path):
+    """
+    Lê o PDF do projeto e extrai datas de início/fim por atividade.
+    Retorna ProjetoExtraido ou None se o arquivo não existir.
+    """
+    if not path.exists():
+        logger.warning("PDF do projeto não encontrado em %s — datas virão nulas", path)
+        return None
+    try:
+        pdf_indexado = ler_pdf_projeto(path)
+        projeto = extrair_projeto(pdf_indexado)
+        logger.info(
+            "PDF carregado: data_inicio=%s, %d atividades extraídas",
+            projeto.data_inicio,
+            len(projeto.atividades),
+        )
+        return projeto
+    except Exception as exc:
+        logger.error("Falha ao carregar PDF: %s", exc)
+        return None
 
 
 def _montar_payload_para_mapper(tasks: list[ClickUpTaskEnriched]) -> dict:
@@ -138,12 +164,15 @@ def main() -> None:
     # 3. monta índice enriquecido por código
     index = _montar_index(tasks)
 
-    # 4. monta contextos + calcula progresso
+    # 4. carrega PDF e extrai datas por atividade
+    projeto_pdf = _carregar_pdf(PDF_PATH)
+
+    # 5. monta contextos + calcula progresso
     uc        = MontarContextosUseCase()
-    resultado = uc.executar(relatorio, index, projeto_pdf=None)
+    resultado = uc.executar(relatorio, index, projeto_pdf=projeto_pdf)
     logger.info(resultado.resumo())
 
-    # 5. injeta progresso e datas no relatório canônico
+    # 6. injeta progresso e datas no relatório canônico
     ctx_by_codigo = {c.codigo: c for c in resultado.contextos}
 
     for meta in relatorio.metas:
@@ -164,7 +193,7 @@ def main() -> None:
             if ctx.progresso:
                 atv.progresso = ctx.progresso
 
-    # 6. exporta JSON final
+    # 7. exporta JSON final
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(
         relatorio.model_dump_json(indent=2),
