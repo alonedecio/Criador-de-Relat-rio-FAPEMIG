@@ -36,3 +36,5 @@ CLICKUP_FOLDER_ID = os.getenv("CLICKUP_FOLDER_ID")
 CLICKUP_LIST_ID = os.getenv("CLICKUP_LIST_ID")
 CLICKUP_API_BASE = "https://api.clickup.com/api/v2"
 
+DATA_INPUT_DIR  = BASE_DIR / "data" / "input"
+PDF_PROJETO = DATA_INPUT_DIR / "termo_projeto.pdf"

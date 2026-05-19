@@ -2,6 +2,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
+
 class DatasCanonicas(BaseModel):
     data_inicio: Optional[str] = None
     data_fim: Optional[str] = None
