@@ -11,6 +11,11 @@ Devolve:
 
 O validator usa regras determinísticas ANTES de chamar a LLM,
 para evitar gasto de tokens em erros óbvios.
+
+Arquitetura LLM:
+    Recebe llm_client já instanciado (openai.OpenAI apontando para Gemini
+    via base_url, ou openai.OpenAI padrão). Não instancia nem importa
+    nenhuma lib de LLM diretamente — segue o padrão Ed Donner.
 """
 from __future__ import annotations
 
@@ -28,10 +33,19 @@ from app.domain.context.builders import ContextoAtividade
 
 logger = logging.getLogger(__name__)
 
+# Modelos que aceitam response_format={"type": "json_object"} via OpenAI SDK.
+# Gemini via base_url do Google NÃO aceita esse parâmetro — retorna erro 400.
+_MODELOS_COM_JSON_MODE = ("gpt-", "o1-", "o3-")
+
+
+def _suporta_json_mode(model: str) -> bool:
+    """Retorna True apenas para modelos OpenAI que aceitam response_format."""
+    return any(model.startswith(p) for p in _MODELOS_COM_JSON_MODE)
+
 
 # ── validação determinística (sem LLM) ───────────────────────────────────────
 
-def _validar_determinisitco(
+def _validar_deterministico(
     ctx: ContextoAtividade,
     textos: TextosGerados,
 ) -> list[str]:
@@ -41,12 +55,12 @@ def _validar_determinisitco(
     """
     erros: list[str] = []
 
-    # 1. Atividade pendente não pode afirmar conclusão
     status_lower = ctx.status.lower()
     dev_lower = textos.desenvolvimento.lower()
     res_lower = textos.resultados.lower()
 
-    termos_conclusao = ["concluída", "concluída", "finalizada", "entregue", "100% realizado"]
+    # 1. Atividade pendente não pode afirmar conclusão
+    termos_conclusao = ["concluída", "finalizada", "entregue", "100% realizado"]
     if "pendente" in status_lower or "não iniciada" in status_lower:
         for termo in termos_conclusao:
             if termo in dev_lower or termo in res_lower:
@@ -91,7 +105,6 @@ def _parse_validacao(resposta_raw: str) -> ResultadoValidacao:
     try:
         data = json.loads(texto)
     except json.JSONDecodeError:
-        # Fallback conservador: aprova com ressalva se não parsear
         return ResultadoValidacao(
             status=StatusValidacao.APROVADO_COM_RESSALVA,
             ressalvas=["Resposta do validator não pôde ser parseada; revisão manual recomendada."],
@@ -116,7 +129,7 @@ def validar_textos(
     ctx_atividade: ContextoAtividade,
     textos: TextosGerados,
     llm_client,
-    model: str = "gpt-4o",
+    model: str = "gemini-2.5-flash",
     usar_llm: bool = True,
 ) -> ResultadoValidacao:
     """
@@ -129,15 +142,15 @@ def validar_textos(
     Args:
         ctx_atividade: contexto da atividade.
         textos:        textos gerados pelo writer.
-        llm_client:    cliente LLM.
-        model:         modelo LLM.
+        llm_client:    cliente openai.OpenAI (Gemini via base_url ou OpenAI nativo).
+        model:         modelo LLM — sem prefixo de provider.
         usar_llm:      se False, executa apenas validação determinística.
 
     Returns:
         ResultadoValidacao com status e detalhamento.
     """
     # Camada 1: determinística
-    erros_det = _validar_determinisitco(ctx_atividade, textos)
+    erros_det = _validar_deterministico(ctx_atividade, textos)
     if erros_det:
         return ResultadoValidacao(
             status=StatusValidacao.REPROVADO,
@@ -157,16 +170,19 @@ def validar_textos(
 
     logger.debug("Validator: validando atividade %s", ctx_atividade.codigo)
 
+    kwargs: dict = dict(
+        model=model,
+        temperature=0.0,
+        messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user",   "content": usr_prompt},
+        ],
+    )
+    if _suporta_json_mode(model):
+        kwargs["response_format"] = {"type": "json_object"}
+
     try:
-        response = llm_client.chat.completions.create(
-            model=model,
-            temperature=0.0,
-            messages=[
-                {"role": "system", "content": sys_prompt},
-                {"role": "user",   "content": usr_prompt},
-            ],
-            response_format={"type": "json_object"},
-        )
+        response = llm_client.chat.completions.create(**kwargs)
         resposta_raw = response.choices[0].message.content or ""
     except Exception as e:
         logger.warning("Validator LLM falhou para %s: %s", ctx_atividade.codigo, e)

@@ -16,6 +16,11 @@ Orquestra todo o pipeline de ponta a ponta:
        → writer → validator → retry → merger
 
     5. Salva o relatório final com textos em output/
+
+Arquitetura LLM:
+    Recebe llm_client já instanciado pelo pipeline_completo.py
+    (openai.OpenAI com base_url Gemini — padrão Ed Donner).
+    Nenhuma dependência de LiteLLM neste módulo.
 """
 from __future__ import annotations
 
@@ -28,14 +33,6 @@ logger = logging.getLogger(__name__)
 
 
 def _get_codigo(atividade: dict) -> str:
-    """
-    Extrai o código da atividade tolerando tanto snake_case (JSON gerado pelo
-    Pydantic model_dump_json) quanto camelCase (formatos legados).
-
-    Ordem de preferência:
-        numero_atividade_original > numero_atividade > numeroAtividadeOriginal
-        > numeroAtividade > codigo > ""
-    """
     return (
         atividade.get("numero_atividade_original")
         or atividade.get("numero_atividade")
@@ -47,7 +44,6 @@ def _get_codigo(atividade: dict) -> str:
 
 
 def _get_ativ_id(atividade: dict) -> str:
-    """Extrai o task_id do ClickUp tolerando snake_case e camelCase."""
     return (
         atividade.get("atividade_id")
         or atividade.get("atividadeId")
@@ -56,7 +52,6 @@ def _get_ativ_id(atividade: dict) -> str:
 
 
 def _get_titulo(atividade: dict, codigo: str) -> str:
-    """Extrai o título da atividade com fallback seguro."""
     return (
         atividade.get("titulo")
         or atividade.get("titulo_original")
@@ -66,7 +61,6 @@ def _get_titulo(atividade: dict, codigo: str) -> str:
 
 
 def _get_progresso(atividade: dict):
-    """Extrai o bloco de progresso tolerando snake_case e camelCase."""
     return (
         atividade.get("progresso")
         or atividade.get("progressoCalculado")
@@ -78,10 +72,8 @@ def _iter_atividades(relatorio: dict):
     Itera sobre todas as atividades do relatório canônico tolerando
     tanto a estrutura 'metas' (Pydantic snake_case) quanto 'itens' (legado).
     """
-    # estrutura nova: relatorio.metas[].atividades[]
     for meta in relatorio.get("metas", []):
         yield from meta.get("atividades", [])
-    # estrutura legada: relatorio.itens[].atividades[]
     for item in relatorio.get("itens", []):
         yield from item.get("atividades", [])
 
@@ -92,7 +84,7 @@ def executar(
     clickup_snapshot_path: Path,
     output_path: Path,
     llm_client,
-    model: str = "gemini/gemini-2.0-flash",
+    model: str = "gemini-2.5-flash",
     max_tentativas: int = 3,
     atividades_filtro: Optional[list[str]] = None,
 ) -> dict:
@@ -104,8 +96,8 @@ def executar(
         relatorio_progresso_path: Path para o JSON com progresso calculado
         clickup_snapshot_path:    Path para o JSON enriquecido do ClickUp
         output_path:              Path para salvar o relatório final
-        llm_client:               Cliente LLM (openai.OpenAI, litellm, etc.)
-        model:                    Modelo LLM a usar
+        llm_client:               openai.OpenAI (Gemini via base_url ou OpenAI nativo)
+        model:                    Modelo LLM — sem prefixo de provider
         max_tentativas:           Máximo de tentativas por atividade
         atividades_filtro:        Se fornecido, processa só estas atividades
                                   (ex: ["2.1", "4.1"] para teste parcial)
@@ -137,7 +129,6 @@ def executar(
     with open(clickup_snapshot_path, "r", encoding="utf-8") as f:
         snapshot_raw = json.load(f)
 
-    # Indexa tasks pelo task_id para lookup O(1)
     from app.domain.clickup.models import ClickUpTaskEnriched
     tasks_index: dict[str, ClickUpTaskEnriched] = {}
 
@@ -191,17 +182,13 @@ def executar(
         logger.info("Códigos processados: %s", codigos_encontrados)
 
     if not contextos:
-        # Log diagnóstico: mostra os códigos reais que existem no relatório
-        todos = [
-            _get_codigo(atv)
-            for atv in _iter_atividades(relatorio)
-        ]
+        todos = [_get_codigo(atv) for atv in _iter_atividades(relatorio)]
         logger.warning(
             "Nenhum contexto montado.\n"
             "  Filtro solicitado : %s\n"
             "  Códigos no relatório: %s",
             atividades_filtro,
-            sorted(set(todos))[:20],  # mostra até 20 para não poluir o log
+            sorted(set(todos))[:20],
         )
 
     # ── 5. Executa pipeline de agentes ───────────────────────────────

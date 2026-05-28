@@ -2,15 +2,20 @@
 Writer — agente responsável por gerar os três campos textuais de cada atividade.
 
 Recebe:
-    ContextoProjeto  — contexto estático do projeto (termo de outorga)
+    ContextoProjeto   — contexto estático do projeto (termo de outorga)
     ContextoAtividade — contexto dinâmico da atividade (ClickUp + progresso)
 
 Devolve:
-    TextosGerados    — desenvolvimento, resultados, justificativa
+    TextosGerados     — desenvolvimento, resultados, justificativa
 
 A chamada LLM usa dois papéis:
     system: contexto do projeto (cacheável, não muda entre atividades)
     user:   contexto da atividade (muda a cada chamada)
+
+Arquitetura LLM:
+    Recebe llm_client já instanciado (openai.OpenAI apontando para Gemini
+    via base_url, ou openai.OpenAI padrão). Não instancia nem importa
+    nenhuma lib de LLM diretamente — segue o padrão Ed Donner.
 """
 from __future__ import annotations
 
@@ -25,6 +30,10 @@ from app.domain.projects.termo_outorga import ContextoProjeto
 
 logger = logging.getLogger(__name__)
 
+# Modelos que aceitam response_format={"type": "json_object"} via OpenAI SDK.
+# Gemini via base_url do Google NÃO aceita esse parâmetro — retorna erro 400.
+_MODELOS_COM_JSON_MODE = ("gpt-", "o1-", "o3-")
+
 
 class WriterError(Exception):
     """Erro não recuperável do writer (ex: LLM indisponível)."""
@@ -34,6 +43,11 @@ class WriterParseError(Exception):
     """Resposta da LLM não pôde ser parseada como JSON válido."""
 
 
+def _suporta_json_mode(model: str) -> bool:
+    """Retorna True apenas para modelos OpenAI que aceitam response_format."""
+    return any(model.startswith(p) for p in _MODELOS_COM_JSON_MODE)
+
+
 def _parse_resposta(resposta_raw: str) -> TextosGerados:
     """
     Extrai JSON da resposta bruta da LLM.
@@ -41,19 +55,18 @@ def _parse_resposta(resposta_raw: str) -> TextosGerados:
     """
     texto = resposta_raw.strip()
 
-    # Remove bloco markdown se presente
     if texto.startswith("```"):
-        linhas = texto.splitlines()
-        # remove primeira e última linha de markdown
         texto = "\n".join(
-            l for l in linhas
+            l for l in texto.splitlines()
             if not l.strip().startswith("```")
         ).strip()
 
     try:
         data = json.loads(texto)
     except json.JSONDecodeError as e:
-        raise WriterParseError(f"JSON inválido na resposta do writer: {e}\nResposta: {texto[:300]}")
+        raise WriterParseError(
+            f"JSON inválido na resposta do writer: {e}\nResposta: {texto[:300]}"
+        )
 
     campos_obrigatorios = {"desenvolvimento", "resultados", "justificativa"}
     faltando = campos_obrigatorios - set(data.keys())
@@ -71,7 +84,7 @@ def gerar_textos(
     ctx_projeto: ContextoProjeto,
     ctx_atividade: ContextoAtividade,
     llm_client,
-    model: str = "gpt-4o",
+    model: str = "gemini-2.5-flash",
 ) -> TextosGerados:
     """
     Gera os textos de desenvolvimento, resultados e justificativa
@@ -80,9 +93,8 @@ def gerar_textos(
     Args:
         ctx_projeto:   ContextoProjeto extraído do termo de outorga.
         ctx_atividade: ContextoAtividade montado pelo builder.
-        llm_client:    Cliente LLM compatível com interface OpenAI
-                       (openai.OpenAI, litellm, etc.).
-        model:         Identificador do modelo a usar.
+        llm_client:    Cliente openai.OpenAI (Gemini via base_url ou OpenAI nativo).
+        model:         Identificador do modelo — sem prefixo de provider.
 
     Returns:
         TextosGerados com os três campos preenchidos.
@@ -100,18 +112,24 @@ def gerar_textos(
         ctx_atividade.titulo[:60],
     )
 
+    # Gemini via base_url não aceita response_format — instrução está no prompt
+    kwargs: dict = dict(
+        model=model,
+        temperature=0.3,
+        messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user",   "content": usr_prompt},
+        ],
+    )
+    if _suporta_json_mode(model):
+        kwargs["response_format"] = {"type": "json_object"}
+
     try:
-        response = llm_client.chat.completions.create(
-            model=model,
-            temperature=0.3,
-            messages=[
-                {"role": "system", "content": sys_prompt},
-                {"role": "user",   "content": usr_prompt},
-            ],
-            response_format={"type": "json_object"},
-        )
+        response = llm_client.chat.completions.create(**kwargs)
         resposta_raw = response.choices[0].message.content or ""
     except Exception as e:
-        raise WriterError(f"Falha ao chamar LLM para atividade {ctx_atividade.codigo}: {e}") from e
+        raise WriterError(
+            f"Falha ao chamar LLM para atividade {ctx_atividade.codigo}: {e}"
+        ) from e
 
     return _parse_resposta(resposta_raw)
