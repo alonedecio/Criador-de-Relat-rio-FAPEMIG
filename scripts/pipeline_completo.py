@@ -25,12 +25,18 @@ Uso:
     python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 6.1 16.1
 
     # Modelo específico
-    python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 --model gemini/gemini-2.5-flash-preview-05-20
+    python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 --model gemini-2.5-flash
 
 Variáveis de ambiente (.env):
     CLICKUP_API_TOKEN   — obrigatório para etapas 1 e 2
     CLICKUP_LIST_ID     — obrigatório para etapa 1
     GEMINI_API_KEY      — obrigatório para etapa 4
+
+Arquitetura LLM:
+    Usa openai SDK apontando para a API do Google via base_url
+    (padrão Ed Donner — sem LiteLLM).
+    client = OpenAI(api_key=GEMINI_API_KEY,
+                   base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
 """
 from __future__ import annotations
 
@@ -41,7 +47,6 @@ import sys
 import time
 from pathlib import Path
 
-# root do projeto no path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
@@ -53,8 +58,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pipeline_completo")
 
-# Modelo Gemini padrão — atualizar aqui quando mudar de versão
-DEFAULT_MODEL = "gemini/gemini-2.5-flash-preview-05-20"
+# Modelo padrão — nome simples sem prefixo de provider
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 # ── paths canônicos ────────────────────────────────────────────────────────────
 BASE_DIR      = Path(__file__).resolve().parent.parent
@@ -68,35 +73,7 @@ RELATORIO_PROG    = OUTPUT_DIR / "relatorio_final_com_progresso.json"
 RELATORIO_TEXTOS  = OUTPUT_DIR / "relatorio_com_textos.json"
 PDF_PROJETO       = INPUT_DIR  / "termo_projeto.pdf"
 
-
-# ── LiteLLM wrapper (nível de módulo para evitar NameError de escopo) ──────────
-
-def _litellm_completion(**kwargs):
-    """Chama litellm.completion — função separada para poder ser referenciada."""
-    import litellm as _ll
-    return _ll.completion(**kwargs)
-
-
-class _LiteLLMChat:
-    """Imita openai.OpenAI().chat com interface .completions.create()."""
-
-    class _Completions:
-        @staticmethod
-        def create(**kwargs):
-            return _litellm_completion(**kwargs)
-
-    completions = _Completions()
-
-
-class _LiteLLMClient:
-    """
-    Wrapper mínimo compatível com a interface openai.OpenAI usada no
-    writer e validator:  client.chat.completions.create(...)
-    """
-
-    def __init__(self, api_key: str) -> None:
-        os.environ["GEMINI_API_KEY"] = api_key
-        self.chat = _LiteLLMChat()
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -109,36 +86,39 @@ def _sep(titulo: str) -> None:
 
 
 def _build_llm_client(model: str):
-    """Instancia cliente LLM: LiteLLM/Gemini ou openai.OpenAI."""
-    use_gemini = model.startswith("gemini/") or bool(os.getenv("GEMINI_API_KEY"))
-    use_openai = model.startswith("gpt-") or bool(os.getenv("OPENAI_API_KEY"))
-
-    if use_gemini and not use_openai:
-        try:
-            import litellm
-            litellm.set_verbose = False
-        except ImportError:
-            logger.error(
-                "litellm não instalado.\n"
-                "Execute: pip install litellm"
-            )
-            sys.exit(1)
-
-        gemini_key = os.getenv("GEMINI_API_KEY", "")
-        if not gemini_key:
-            logger.error("GEMINI_API_KEY não encontrada no .env")
-            sys.exit(1)
-
-        logger.info("LLM client: LiteLLM → %s", model)
-        return _LiteLLMClient(gemini_key)
-
+    """
+    Instancia cliente LLM seguindo a arquitetura Ed Donner:
+    - Gemini: openai.OpenAI apontando para base_url do Google
+    - OpenAI: openai.OpenAI padrão
+    """
     try:
-        import openai
-        logger.info("LLM client: openai.OpenAI → %s", model)
-        return openai.OpenAI()
+        from openai import OpenAI
     except ImportError:
         logger.error("openai não instalado. Execute: pip install openai")
         sys.exit(1)
+
+    # Gemini via openai SDK + base_url (padrão Ed Donner)
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+
+    is_gemini = bool(gemini_key) and not model.startswith("gpt-")
+
+    if is_gemini:
+        if not gemini_key:
+            logger.error("GEMINI_API_KEY não encontrada no .env")
+            sys.exit(1)
+        logger.info("LLM client: OpenAI SDK → Gemini API (%s)", model)
+        return OpenAI(
+            api_key=gemini_key,
+            base_url=GEMINI_BASE_URL,
+        )
+
+    # OpenAI nativo
+    if not openai_key:
+        logger.error("OPENAI_API_KEY não encontrada no .env")
+        sys.exit(1)
+    logger.info("LLM client: OpenAI SDK → OpenAI API (%s)", model)
+    return OpenAI(api_key=openai_key)
 
 
 # ── etapas ─────────────────────────────────────────────────────────────────────
@@ -307,7 +287,7 @@ def main() -> None:
         "--model",
         type=str,
         default=DEFAULT_MODEL,
-        help=f"Modelo LLM para etapa 4 (padrão: {DEFAULT_MODEL})",
+        help=f"Modelo para etapa 4 (padrão: {DEFAULT_MODEL})",
     )
     parser.add_argument(
         "--tentativas",
