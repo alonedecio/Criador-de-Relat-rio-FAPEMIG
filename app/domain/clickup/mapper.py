@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 
-from app.domain.reporting.canonical_schemas import RelatorioCanonico
+from app.domain.reporting.canonical_schemas import RelatorioCanonico, ResumoProjetoCanonico
 
 
 PADRAO_META = re.compile(r"^Meta\s+(\d+)\s*-\s*(.+)$", re.IGNORECASE)
@@ -206,6 +206,6 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
             "source": "clickup_raw",
             "task_count": len(tasks),
         },
-        resumo_projeto={"dados": {}},
+        resumo_projeto=ResumoProjetoCanonico(),
         metas=metas_ordenadas,
     )
