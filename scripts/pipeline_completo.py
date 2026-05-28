@@ -66,6 +66,36 @@ RELATORIO_TEXTOS  = OUTPUT_DIR / "relatorio_com_textos.json"
 PDF_PROJETO       = INPUT_DIR  / "termo_projeto.pdf"
 
 
+# ── LiteLLM wrapper (nível de módulo para evitar NameError de escopo) ──────────
+
+def _litellm_completion(**kwargs):
+    """Chama litellm.completion — função separada para poder ser referenciada."""
+    import litellm as _ll
+    return _ll.completion(**kwargs)
+
+
+class _LiteLLMChat:
+    """Imita openai.OpenAI().chat com interface .completions.create()."""
+
+    class _Completions:
+        @staticmethod
+        def create(**kwargs):
+            return _litellm_completion(**kwargs)
+
+    completions = _Completions()
+
+
+class _LiteLLMClient:
+    """
+    Wrapper mínimo compatível com a interface openai.OpenAI usada no
+    writer e validator:  client.chat.completions.create(...)
+    """
+
+    def __init__(self, api_key: str) -> None:
+        os.environ["GEMINI_API_KEY"] = api_key
+        self.chat = _LiteLLMChat()
+
+
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 def _sep(titulo: str) -> None:
@@ -84,36 +114,20 @@ def _build_llm_client(model: str):
         try:
             import litellm
             litellm.set_verbose = False
-
-            class _LiteLLMWrapper:
-                def __init__(self, api_key: str):
-                    os.environ["GEMINI_API_KEY"] = api_key
-
-                class _Completions:
-                    @staticmethod
-                    def create(**kwargs):
-                        import litellm as _ll
-                        return _ll.completion(**kwargs)
-
-                class _Chat:
-                    completions = _Completions()
-
-                chat = _Chat()
-
-            gemini_key = os.getenv("GEMINI_API_KEY", "")
-            if not gemini_key:
-                logger.error("GEMINI_API_KEY não encontrada no .env")
-                sys.exit(1)
-
-            logger.info("LLM client: LiteLLM → %s", model)
-            return _LiteLLMWrapper(gemini_key)
-
         except ImportError:
             logger.error(
                 "litellm não instalado.\n"
                 "Execute: pip install litellm"
             )
             sys.exit(1)
+
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
+        if not gemini_key:
+            logger.error("GEMINI_API_KEY não encontrada no .env")
+            sys.exit(1)
+
+        logger.info("LLM client: LiteLLM → %s", model)
+        return _LiteLLMClient(gemini_key)
 
     try:
         import openai
@@ -163,7 +177,6 @@ def etapa_3_relatorio_progresso() -> None:
 
     _RE_CODIGO = re.compile(r"^(\d+\.\d+)")
 
-    # carrega snapshot
     raw = json.loads(ENRICHED_SNAPSHOT.read_text(encoding="utf-8"))
     tasks: list[ClickUpTaskEnriched] = []
     if isinstance(raw, dict) and "tasks" in raw:
@@ -179,7 +192,6 @@ def etapa_3_relatorio_progresso() -> None:
                 pass
     logger.info("%d tasks carregadas do enriched snapshot", len(tasks))
 
-    # constrói relatório canônico
     payload = {"tasks": []}
     for t in tasks:
         b = t.base
@@ -194,7 +206,6 @@ def etapa_3_relatorio_progresso() -> None:
         sum(len(m.atividades) for m in relatorio.metas),
     )
 
-    # index por código
     index_dict: dict = {}
     for task in tasks:
         m = _RE_CODIGO.match((task.base.name or "").strip())
@@ -203,7 +214,6 @@ def etapa_3_relatorio_progresso() -> None:
     enriched_index = EnrichedIndex(task_por_codigo=index_dict)
     logger.info("%d atividades indexadas por código", len(index_dict))
 
-    # PDF
     projeto_pdf = None
     if PDF_PROJETO.exists():
         try:
@@ -214,7 +224,6 @@ def etapa_3_relatorio_progresso() -> None:
     else:
         logger.warning("PDF não encontrado em %s — datas virão nulas", PDF_PROJETO)
 
-    # progresso
     uc = MontarContextosUseCase()
     resultado = uc.executar(relatorio, enriched_index, projeto_pdf=projeto_pdf)
     logger.info(resultado.resumo())
@@ -246,8 +255,8 @@ def etapa_4_gerar_textos(
     _sep("ETAPA 4 — Agentes IA: writer → validator → retry → merger")
 
     for path, nome in [
-        (PDF_PROJETO,    "Termo PDF"),
-        (RELATORIO_PROG, "Relatório de progresso"),
+        (PDF_PROJETO,       "Termo PDF"),
+        (RELATORIO_PROG,    "Relatório de progresso"),
         (ENRICHED_SNAPSHOT, "Enriched snapshot ClickUp"),
     ]:
         if not path.exists():
