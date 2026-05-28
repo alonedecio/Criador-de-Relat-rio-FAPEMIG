@@ -24,8 +24,8 @@ Uso:
     # Só agentes, limitado a 4 atividades de teste
     python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 6.1 16.1
 
-    # Modelo mais barato para testes
-    python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 --model gemini/gemini-2.0-flash
+    # Modelo específico
+    python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 --model gemini/gemini-2.5-flash-preview-05-20
 
 Variáveis de ambiente (.env):
     CLICKUP_API_TOKEN   — obrigatório para etapas 1 e 2
@@ -52,6 +52,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
 )
 logger = logging.getLogger("pipeline_completo")
+
+# Modelo Gemini padrão — atualizar aqui quando mudar de versão
+DEFAULT_MODEL = "gemini/gemini-2.5-flash-preview-05-20"
 
 # ── paths canônicos ────────────────────────────────────────────────────────────
 BASE_DIR      = Path(__file__).resolve().parent.parent
@@ -280,7 +283,7 @@ def etapa_4_gerar_textos(
     )
     elapsed = time.time() - t0
 
-    total = sum(len(item.get("atividades", [])) for item in relatorio_final.get("itens", []))
+    total = sum(len(m.get("atividades", [])) for m in relatorio_final.get("metas", []))
     logger.info("")
     logger.info("Pipeline concluído em %.1fs", elapsed)
     logger.info("%d atividades no relatório final", total)
@@ -303,8 +306,8 @@ def main() -> None:
     parser.add_argument(
         "--model",
         type=str,
-        default="gemini/gemini-2.0-flash",
-        help="Modelo LLM para etapa 4 (ex: gemini/gemini-2.0-flash, gpt-4o)",
+        default=DEFAULT_MODEL,
+        help=f"Modelo LLM para etapa 4 (padrão: {DEFAULT_MODEL})",
     )
     parser.add_argument(
         "--tentativas",
