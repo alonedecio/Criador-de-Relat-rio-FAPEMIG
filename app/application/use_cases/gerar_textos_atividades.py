@@ -16,13 +16,6 @@ Orquestra todo o pipeline de ponta a ponta:
        → writer → validator → retry → merger
 
     5. Salva o relatório final com textos em output/
-
-Parâmetros configuráveis via settings (app/core/config.py):
-    - TERMO_PROJETO_PDF_PATH
-    - RELATORIO_PROGRESSO_PATH
-    - CLICKUP_ENRICHED_SNAPSHOT_PATH
-    - LLM_MODEL
-    - AI_MAX_TENTATIVAS
 """
 from __future__ import annotations
 
@@ -32,6 +25,65 @@ from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _get_codigo(atividade: dict) -> str:
+    """
+    Extrai o código da atividade tolerando tanto snake_case (JSON gerado pelo
+    Pydantic model_dump_json) quanto camelCase (formatos legados).
+
+    Ordem de preferência:
+        numero_atividade_original > numero_atividade > numeroAtividadeOriginal
+        > numeroAtividade > codigo > ""
+    """
+    return (
+        atividade.get("numero_atividade_original")
+        or atividade.get("numero_atividade")
+        or atividade.get("numeroAtividadeOriginal")
+        or atividade.get("numeroAtividade")
+        or atividade.get("codigo")
+        or ""
+    )
+
+
+def _get_ativ_id(atividade: dict) -> str:
+    """Extrai o task_id do ClickUp tolerando snake_case e camelCase."""
+    return (
+        atividade.get("atividade_id")
+        or atividade.get("atividadeId")
+        or ""
+    )
+
+
+def _get_titulo(atividade: dict, codigo: str) -> str:
+    """Extrai o título da atividade com fallback seguro."""
+    return (
+        atividade.get("titulo")
+        or atividade.get("titulo_original")
+        or atividade.get("tituloOriginal")
+        or f"Atividade {codigo}"
+    )
+
+
+def _get_progresso(atividade: dict):
+    """Extrai o bloco de progresso tolerando snake_case e camelCase."""
+    return (
+        atividade.get("progresso")
+        or atividade.get("progressoCalculado")
+    )
+
+
+def _iter_atividades(relatorio: dict):
+    """
+    Itera sobre todas as atividades do relatório canônico tolerando
+    tanto a estrutura 'metas' (Pydantic snake_case) quanto 'itens' (legado).
+    """
+    # estrutura nova: relatorio.metas[].atividades[]
+    for meta in relatorio.get("metas", []):
+        yield from meta.get("atividades", [])
+    # estrutura legada: relatorio.itens[].atividades[]
+    for item in relatorio.get("itens", []):
+        yield from item.get("atividades", [])
 
 
 def executar(
@@ -61,8 +113,7 @@ def executar(
     Returns:
         Dicionário do relatório final com textos e auditoria.
     """
-    # ── 1. Carrega e extrai o Termo de Outorga ────────────────────────────
-    # FIX: nome correto da função é ler_pdf_projeto, não ler_pdf
+    # ── 1. Carrega e extrai o Termo de Outorga ──────────────────────────
     from app.domain.projects.pdf_reader import ler_pdf_projeto
     from app.domain.projects.termo_outorga import extrair_contexto_projeto
 
@@ -76,20 +127,22 @@ def executar(
         len(ctx_projeto.objetivos_especificos),
     )
 
-    # ── 2. Carrega o relatório canônico com progresso ─────────────────────
+    # ── 2. Carrega o relatório canônico com progresso ───────────────────
     logger.info("Carregando relatório de progresso: %s", relatorio_progresso_path)
     with open(relatorio_progresso_path, "r", encoding="utf-8") as f:
         relatorio = json.load(f)
 
-    # ── 3. Carrega snapshot enriquecido do ClickUp ────────────────────────
+    # ── 3. Carrega snapshot enriquecido do ClickUp ──────────────────────
     logger.info("Carregando snapshot ClickUp enriquecido: %s", clickup_snapshot_path)
     with open(clickup_snapshot_path, "r", encoding="utf-8") as f:
         snapshot_raw = json.load(f)
 
-    # Indexa tasks pelo id para lookup O(1)
+    # Indexa tasks pelo task_id para lookup O(1)
     from app.domain.clickup.models import ClickUpTaskEnriched
     tasks_index: dict[str, ClickUpTaskEnriched] = {}
-    for item in snapshot_raw if isinstance(snapshot_raw, list) else snapshot_raw.get("tasks", []):
+
+    raw_list = snapshot_raw if isinstance(snapshot_raw, list) else snapshot_raw.get("tasks", [])
+    for item in raw_list:
         try:
             task = ClickUpTaskEnriched(**item)
             tasks_index[task.task_id] = task
@@ -98,47 +151,60 @@ def executar(
 
     logger.info("Snapshot ClickUp: %d tasks indexadas.", len(tasks_index))
 
-    # ── 4. Monta contextos das atividades ─────────────────────────────────
+    # ── 4. Monta contextos das atividades ──────────────────────────────
     from app.domain.context.builders import montar_contexto
     from app.domain.reporting.canonical_schemas import ProgressoAtividadeCanonico
 
     contextos = []
-    for item in relatorio.get("itens", []):
-        for atividade in item.get("atividades", []):
-            codigo  = atividade.get("numeroAtividade") or atividade.get("codigo", "")
-            ativ_id = atividade.get("atividadeId") or atividade.get("atividade_id", "")
-            titulo  = atividade.get("titulo", f"Atividade {codigo}")
+    codigos_encontrados: list[str] = []
 
-            if atividades_filtro and codigo not in atividades_filtro:
-                continue
+    for atividade in _iter_atividades(relatorio):
+        codigo  = _get_codigo(atividade)
+        ativ_id = _get_ativ_id(atividade)
+        titulo  = _get_titulo(atividade, codigo)
 
-            task = tasks_index.get(ativ_id)
-            prog_raw = atividade.get("progressoCalculado")
-            progresso: Optional[ProgressoAtividadeCanonico] = None
-            if prog_raw:
-                try:
-                    progresso = ProgressoAtividadeCanonico(**prog_raw)
-                except Exception:
-                    pass
+        if atividades_filtro and codigo not in atividades_filtro:
+            continue
 
-            ctx = montar_contexto(
-                codigo=codigo,
-                titulo=titulo,
-                task=task,
-                pdf_atv=None,
-                progresso=progresso,
-            )
-            contextos.append(ctx)
+        codigos_encontrados.append(codigo)
+        task = tasks_index.get(ativ_id)
+
+        prog_raw = _get_progresso(atividade)
+        progresso: Optional[ProgressoAtividadeCanonico] = None
+        if prog_raw and isinstance(prog_raw, dict):
+            try:
+                progresso = ProgressoAtividadeCanonico(**prog_raw)
+            except Exception:
+                pass
+
+        ctx = montar_contexto(
+            codigo=codigo,
+            titulo=titulo,
+            task=task,
+            pdf_atv=None,
+            progresso=progresso,
+        )
+        contextos.append(ctx)
 
     logger.info("%d contextos de atividade montados.", len(contextos))
+    if codigos_encontrados:
+        logger.info("Códigos processados: %s", codigos_encontrados)
 
     if not contextos:
+        # Log diagnóstico: mostra os códigos reais que existem no relatório
+        todos = [
+            _get_codigo(atv)
+            for atv in _iter_atividades(relatorio)
+        ]
         logger.warning(
-            "Nenhum contexto montado. Verifique se os códigos do filtro "
-            "batem com os valores de 'numeroAtividade' no relatório."
+            "Nenhum contexto montado.\n"
+            "  Filtro solicitado : %s\n"
+            "  Códigos no relatório: %s",
+            atividades_filtro,
+            sorted(set(todos))[:20],  # mostra até 20 para não poluir o log
         )
 
-    # ── 5. Executa pipeline de agentes ────────────────────────────────────
+    # ── 5. Executa pipeline de agentes ───────────────────────────────
     from app.domain.ai.service import AIService
 
     service = AIService(
@@ -149,7 +215,7 @@ def executar(
     )
     relatorio_final = service.processar_relatorio(relatorio, contextos)
 
-    # ── 6. Salva resultado ────────────────────────────────────────────────
+    # ── 6. Salva resultado ──────────────────────────────────────────
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(relatorio_final, f, ensure_ascii=False, indent=2)
