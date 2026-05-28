@@ -7,6 +7,17 @@ completa de ContextoAtividade para todas as atividades.
 
 Não acessa ClickUp, não acessa PDF diretamente, não chama IA.
 Recebe os dados já carregados e orquestra os serviços de domínio.
+
+ORDEM CORRETA DO PIPELINE POR ATIVIDADE:
+  1. montar_contexto()   → resolve datas (ClickUp > PDF > ausente),
+                            monta descrição, checklists, responsáveis
+  2. calcular_progresso() → recebe as datas já resolvidas como override,
+                            garantindo que datas do PDF sejam usadas
+                            mesmo quando ClickUp não tem startdate/duedate
+  3. ctx.progresso = ...  → injeta resultado de volta no contexto
+
+Essa ordem é intencional: calcular_progresso precisa das datas definitivas,
+que só estão disponíveis após montar_contexto() cruzar ClickUp + PDF.
 """
 from __future__ import annotations
 
@@ -26,7 +37,7 @@ from app.domain.reporting.progress import calcular_progresso
 logger = logging.getLogger(__name__)
 
 
-# ── modelos de entrada ────────────────────────────────────────────────────────
+# ── modelos de entrada ────────────────────────────────────────────────────
 
 
 @dataclass
@@ -43,7 +54,7 @@ class EnrichedIndex:
         return self.task_por_codigo.get(codigo)
 
 
-# ── resultado ─────────────────────────────────────────────────────────────────
+# ── resultado ─────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -64,19 +75,17 @@ class ResultadoContextos:
         )
 
 
-# ── use case ──────────────────────────────────────────────────────────────────
+# ── use case ──────────────────────────────────────────────────────────────
 
 
 class MontarContextosUseCase:
     """
     Monta ContextoAtividade para cada atividade do relatório canônico.
 
-    Fluxo por atividade:
-      1. Busca task enriquecida no EnrichedIndex (ClickUp)
-      2. Busca AtividadePDF no ProjetoExtraido (PDF)
-      3. Calcula progresso a partir da task (se disponível)
-      4. Chama montar_contexto() para cruzar as fontes
-      5. Registra diagnóstico
+    Fluxo por atividade (ver docstring do módulo para justificativa da ordem):
+      1. montar_contexto()    → resolve datas e monta estrutura
+      2. calcular_progresso() → usa datas já resolvidas como override
+      3. injeta progresso no contexto
     """
 
     def executar(
@@ -93,7 +102,6 @@ class MontarContextosUseCase:
 
         for meta in relatorio.metas:
             for atv in meta.atividades:
-                # ← usa os campos reais do schema canônico
                 codigo = atv.numero_atividade_original or atv.numero_atividade or atv.atividade_id
                 ctx = self._montar_uma(
                     codigo=codigo,
@@ -126,7 +134,7 @@ class MontarContextosUseCase:
         logger.info("MontarContextosUseCase: %s", resultado.resumo())
         return resultado
 
-    # ── privado ───────────────────────────────────────────────────────────────
+    # ── privado ─────────────────────────────────────────────────────────────
 
     def _montar_uma(
         self,
@@ -136,19 +144,34 @@ class MontarContextosUseCase:
         projeto_pdf:    Optional[ProjetoExtraido],
     ) -> ContextoAtividade:
 
-        task      = enriched_index.get(codigo)
-        pdf_atv   = projeto_pdf.por_codigo(codigo) if projeto_pdf else None
-        progresso = calcular_progresso(task) if task else atv.progresso
+        task    = enriched_index.get(codigo)
+        pdf_atv = projeto_pdf.por_codigo(codigo) if projeto_pdf else None
 
         if not task:
             logger.debug("Atividade %s: sem task no ClickUp", codigo)
         if not pdf_atv:
             logger.debug("Atividade %s: sem entrada no PDF", codigo)
 
-        return montar_contexto(
+        # Passo 1: monta contexto (resolve datas ClickUp > PDF > ausente)
+        ctx = montar_contexto(
             codigo=codigo,
             titulo=atv.titulo,
             task=task,
             pdf_atv=pdf_atv,
-            progresso=progresso,
+            progresso=None,  # será preenchido no passo 2
         )
+
+        # Passo 2: calcula progresso com as datas já resolvidas
+        # IMPORTANTE: passa data_inicio e data_fim do ctx como override para que
+        # calcular_progresso use as datas do PDF quando o ClickUp não tem datas.
+        if task:
+            ctx.progresso = calcular_progresso(
+                task=task,
+                data_inicio_override=ctx.data_inicio,
+                data_fim_override=ctx.data_fim,
+            )
+        else:
+            # Sem task no ClickUp: usa progresso já calculado anteriormente (se houver)
+            ctx.progresso = atv.progresso
+
+        return ctx
