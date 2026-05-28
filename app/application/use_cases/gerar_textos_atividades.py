@@ -40,7 +40,7 @@ def executar(
     clickup_snapshot_path: Path,
     output_path: Path,
     llm_client,
-    model: str = "gpt-4o",
+    model: str = "gemini/gemini-2.0-flash",
     max_tentativas: int = 3,
     atividades_filtro: Optional[list[str]] = None,
 ) -> dict:
@@ -56,17 +56,18 @@ def executar(
         model:                    Modelo LLM a usar
         max_tentativas:           Máximo de tentativas por atividade
         atividades_filtro:        Se fornecido, processa só estas atividades
-                                  (ex: ["4.2", "7.1"] para teste parcial)
+                                  (ex: ["2.1", "4.1"] para teste parcial)
 
     Returns:
         Dicionário do relatório final com textos e auditoria.
     """
     # ── 1. Carrega e extrai o Termo de Outorga ────────────────────────────
-    from app.domain.projects.pdf_reader import ler_pdf
+    # FIX: nome correto da função é ler_pdf_projeto, não ler_pdf
+    from app.domain.projects.pdf_reader import ler_pdf_projeto
     from app.domain.projects.termo_outorga import extrair_contexto_projeto
 
     logger.info("Carregando Termo de Outorga: %s", termo_pdf_path)
-    pdf_indexado = ler_pdf(termo_pdf_path)
+    pdf_indexado = ler_pdf_projeto(termo_pdf_path)
     ctx_projeto = extrair_contexto_projeto(pdf_indexado)
     logger.info(
         "ContextoProjeto extraído: '%s' | %d metas | %d obj. específicos",
@@ -104,9 +105,9 @@ def executar(
     contextos = []
     for item in relatorio.get("itens", []):
         for atividade in item.get("atividades", []):
-            codigo    = atividade.get("numeroAtividade") or atividade.get("codigo", "")
-            ativ_id   = atividade.get("atividadeId") or atividade.get("atividade_id", "")
-            titulo    = atividade.get("titulo", f"Atividade {codigo}")
+            codigo  = atividade.get("numeroAtividade") or atividade.get("codigo", "")
+            ativ_id = atividade.get("atividadeId") or atividade.get("atividade_id", "")
+            titulo  = atividade.get("titulo", f"Atividade {codigo}")
 
             if atividades_filtro and codigo not in atividades_filtro:
                 continue
@@ -124,12 +125,18 @@ def executar(
                 codigo=codigo,
                 titulo=titulo,
                 task=task,
-                pdf_atv=None,       # datas já vêm do relatorio de progresso
+                pdf_atv=None,
                 progresso=progresso,
             )
             contextos.append(ctx)
 
     logger.info("%d contextos de atividade montados.", len(contextos))
+
+    if not contextos:
+        logger.warning(
+            "Nenhum contexto montado. Verifique se os códigos do filtro "
+            "batem com os valores de 'numeroAtividade' no relatório."
+        )
 
     # ── 5. Executa pipeline de agentes ────────────────────────────────────
     from app.domain.ai.service import AIService
