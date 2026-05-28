@@ -8,6 +8,9 @@ REGRA GERAL DE realizado_percentual:
   2. Se há itens de ação (checklists) com total > 0
        → percentual = itens_concluidos / total_itens * 100
        (consolida TODOS os checklists da tarefa — Entregáveis + Indicador de Progresso)
+       EXCEÇÃO: se o percentual chegar a 100% mas o status não for "concluido",
+       capeia em 99% (dados inconsistentes no ClickUp — checklist marcado mas
+       status não atualizado).
 
   3. Sem itens de ação + status == "pendente" ou "nao_iniciada"
        → 0.0 (nenhuma evidência de progresso)
@@ -23,15 +26,26 @@ REGRA GERAL DE realizado_percentual:
        → retorna None para previsto_percentual (não é possível calcular)
        → realizado_percentual cai para a regra 3 (0.0 sem evidência)
 
+DATAS:
+  As datas planejadas podem vir de duas fontes, na ordem de prioridade:
+    1. data_inicio_override / data_fim_override  → vindas do PDF (via ContextoAtividade)
+    2. task.base.startdate / task.base.duedate   → vindas do ClickUp
+
+  Isso é necessário porque muitas tasks no ClickUp não têm datas preenchidas,
+  sendo as datas extraídas do PDF do projeto a fonte canônica nesses casos.
+
 Não acessa o ClickUp nem faz I/O — pura lógica de domínio.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from app.domain.clickup.models import ClickUpTaskEnriched
 from app.domain.reporting.canonical_schemas import ProgressoAtividadeCanonico
+
+logger = logging.getLogger(__name__)
 
 
 # ── helpers internos ──────────────────────────────────────────────────────────
@@ -42,12 +56,25 @@ def _ms_to_dt(ms: Optional[int]) -> Optional[datetime]:
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
 
 
+def _date_to_ms(d: Optional[date]) -> Optional[int]:
+    """date → timestamp em ms (meio-dia UTC para evitar off-by-one de fuso)."""
+    if d is None:
+        return None
+    return int(datetime(d.year, d.month, d.day, 12, 0, 0, tzinfo=timezone.utc).timestamp() * 1000)
+
+
 def _ms_to_mesano(ms: Optional[int]) -> Optional[str]:
     """Timestamp ms → string 'MM/AAAA'. Ex: 1777446000000 → '04/2026'."""
     dt = _ms_to_dt(ms)
     if dt is None:
         return None
     return dt.strftime("%m/%Y")
+
+
+def _date_to_mesano(d: Optional[date]) -> Optional[str]:
+    if d is None:
+        return None
+    return d.strftime("%m/%Y")
 
 
 def _dias_entre(inicio_ms: Optional[int], fim_ms: Optional[int]) -> Optional[int]:
@@ -72,7 +99,6 @@ def _percentual_cronograma(
     if inicio_ms is None or fim_ms is None:
         return None
     if inicio_ms >= fim_ms:
-        # Datas inválidas ou sem duração — não é possível calcular
         return None
     agora = agora or datetime.now(tz=timezone.utc)
     agora_ms = agora.timestamp() * 1000
@@ -85,12 +111,11 @@ def _percentual_checklists(task: ClickUpTaskEnriched) -> Optional[float]:
     Calcula o percentual de conclusão com base nos itens de ação (checklists).
 
     Consolida TODOS os checklists da tarefa (Entregáveis, Indicador de Progresso etc.).
-    Usa checklistssummary quando disponível (mais eficiente); faz fallback para
+    Usa checklists_summary quando disponível (mais eficiente); faz fallback para
     contagem direta em checklists[].items[] quando necessário.
 
     Retorna None se não houver itens de ação definidos.
     """
-    # Tenta usar checklistssummary (campo pré-calculado no snapshot enriquecido)
     summaries = task.checklists_summary or []
     if summaries:
         total = sum(s.get("total", 0) for s in summaries)
@@ -99,7 +124,7 @@ def _percentual_checklists(task: ClickUpTaskEnriched) -> Optional[float]:
             return round((concluidos / total) * 100, 2)
 
     # Fallback: conta diretamente nos itens de cada checklist
-    checklists = getattr(task, "checklists", None) or []
+    checklists = task.checklists or []
     if not checklists:
         return None
 
@@ -146,35 +171,50 @@ def _situacao_prazo(
 
 # ── função pública ────────────────────────────────────────────────────────────
 
-def calcular_progresso(task: ClickUpTaskEnriched) -> ProgressoAtividadeCanonico:
+def calcular_progresso(
+    task: ClickUpTaskEnriched,
+    data_inicio_override: Optional[date] = None,
+    data_fim_override: Optional[date] = None,
+) -> ProgressoAtividadeCanonico:
     """
     Calcula ProgressoAtividadeCanonico a partir de uma ClickUpTaskEnriched.
 
-    Fontes de data:
-        data_planejada_inicio  →  task.base.startdate  (start_date ClickUp)
-        data_planejada_fim     →  task.base.duedate    (due_date   ClickUp)
-        data_realizada_fim     →  task.base.datedone   (date_done  ClickUp)
-                                  ou task.base.dateclosed como fallback
+    Fontes de data (em ordem de prioridade):
+        data_inicio_override   →  vinda do PDF via ContextoAtividade (prioridade 1)
+        data_fim_override      →  vinda do PDF via ContextoAtividade (prioridade 1)
+        task.base.startdate    →  start_date do ClickUp              (prioridade 2)
+        task.base.duedate      →  due_date do ClickUp                (prioridade 2)
+        task.base.datedone     →  data_realizada_fim (ClickUp)
+        task.base.dateclosed   →  fallback de data_realizada_fim
 
     Ver docstring do módulo para as regras completas de realizado_percentual.
     """
     agora = datetime.now(tz=timezone.utc)
     agora_ms = agora.timestamp() * 1000
 
-    ini_ms = task.data_planejada_inicio_ms
-    fim_ms = task.data_planejada_fim_ms
-    feito_ms = task.data_realizada_fim_ms
-    status = _status_normalizado(task.base.status or "")
+    # Resolve datas: override do PDF tem prioridade sobre ClickUp
+    ini_ms = _date_to_ms(data_inicio_override) if data_inicio_override else task.data_planejada_inicio_ms
+    fim_ms = _date_to_ms(data_fim_override)    if data_fim_override    else task.data_planejada_fim_ms
 
-    concluido = status == "concluido"
+    # Origem das datas para rastreabilidade (usado só em log)
+    origem_ini = "pdf" if data_inicio_override else ("clickup" if task.data_planejada_inicio_ms else "ausente")
+    origem_fim = "pdf" if data_fim_override     else ("clickup" if task.data_planejada_fim_ms    else "ausente")
+
+    feito_ms = task.data_realizada_fim_ms
+    status   = _status_normalizado(task.base.status or "")
+
+    concluido    = status == "concluido"
     em_progresso = status == "em_progresso"
+
+    logger.debug(
+        "calcular_progresso task=%s status=%s ini_ms=%s(%s) fim_ms=%s(%s)",
+        task.task_id, status, ini_ms, origem_ini, fim_ms, origem_fim,
+    )
 
     # ── flag de atraso ────────────────────────────────────────────────────────
     if concluido:
-        # Atrasada se foi concluída depois da data fim planejada
         atrasada = bool(feito_ms and fim_ms and feito_ms > fim_ms)
     else:
-        # Atrasada se a data fim já passou e ainda não foi concluída
         atrasada = fim_ms is not None and agora_ms > fim_ms
 
     # ── realizado_percentual — aplicar regras na ordem de prioridade ──────────
@@ -187,9 +227,19 @@ def calcular_progresso(task: ClickUpTaskEnriched) -> ProgressoAtividadeCanonico:
         # Regra 2: tem itens de ação → usar checklists
         pct_checklist = _percentual_checklists(task)
         if pct_checklist is not None:
-            realizado_pct = pct_checklist
+            if pct_checklist >= 100.0:
+                # Checklist totalmente marcado mas status não é "concluido"
+                # → dados inconsistentes no ClickUp; capeia em 99% para não
+                #   confundir com conclusão real
+                logger.warning(
+                    "task %s: checklist 100%% mas status='%s' — capeando em 99%%",
+                    task.task_id, status,
+                )
+                realizado_pct = 99.0
+            else:
+                realizado_pct = pct_checklist
 
-        # Regra 3: sem itens de ação + não iniciada → 0%
+        # Regra 3: sem itens de ação + não em progresso → 0%
         elif not em_progresso:
             realizado_pct = 0.0
 
@@ -198,29 +248,30 @@ def calcular_progresso(task: ClickUpTaskEnriched) -> ProgressoAtividadeCanonico:
             pct_tempo = _percentual_cronograma(ini_ms, fim_ms, agora)
 
             if pct_tempo is None:
-                # Datas inválidas → sem evidência de progresso
                 realizado_pct = 0.0
             elif atrasada:
-                # Regra 5: atrasada → permite ultrapassar 100%, mas capeia em 99%
-                # para não confundir com concluído (que é sempre 100% explícito)
                 realizado_pct = min(pct_tempo, 99.0)
             else:
-                # Regra 4: dentro do prazo → capeado normalmente em 100%
                 realizado_pct = min(pct_tempo, 100.0)
 
-    # ── previsto_percentual — quanto do prazo planejado já deveria ter passado ─
+    # ── previsto_percentual ───────────────────────────────────────────────────
     previsto_pct = _percentual_cronograma(ini_ms, fim_ms, agora)
     if previsto_pct is not None:
-        previsto_pct = min(previsto_pct, 100.0)  # previsto nunca passa de 100%
+        previsto_pct = min(previsto_pct, 100.0)
+
+    # ── campos de data para o schema canônico ─────────────────────────────────
+    # Prefere formatar a partir do date override (mais preciso); fallback para ms
+    mes_ano_ini_prev = _date_to_mesano(data_inicio_override) or _ms_to_mesano(task.data_planejada_inicio_ms)
+    mes_ano_fim_prev = _date_to_mesano(data_fim_override)    or _ms_to_mesano(task.data_planejada_fim_ms)
 
     return ProgressoAtividadeCanonico(
         atrasada=atrasada,
         situacao_prazo=_situacao_prazo(concluido, em_progresso, atrasada, fim_ms),
         duracao_prevista_dias=_dias_entre(ini_ms, fim_ms),
         duracao_efetiva_dias=_dias_entre(ini_ms, feito_ms) if feito_ms else None,
-        mes_ano_inicio_previsto=_ms_to_mesano(ini_ms),
-        mes_ano_fim_previsto=_ms_to_mesano(fim_ms),
-        mes_ano_inicio_real=_ms_to_mesano(ini_ms) if (concluido or em_progresso) else None,
+        mes_ano_inicio_previsto=mes_ano_ini_prev,
+        mes_ano_fim_previsto=mes_ano_fim_prev,
+        mes_ano_inicio_real=mes_ano_ini_prev if (concluido or em_progresso) else None,
         mes_ano_fim_real=_ms_to_mesano(feito_ms),
         previsto_percentual=previsto_pct,
         realizado_percentual=realizado_pct,
