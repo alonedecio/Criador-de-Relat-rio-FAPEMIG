@@ -19,6 +19,7 @@ Arquitetura LLM:
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 from typing import Optional
@@ -41,6 +42,14 @@ _MODELOS_COM_JSON_MODE = ("gpt-", "o1-", "o3-")
 def _suporta_json_mode(model: str) -> bool:
     """Retorna True apenas para modelos OpenAI que aceitam response_format."""
     return any(model.startswith(p) for p in _MODELOS_COM_JSON_MODE)
+
+
+def _textos_para_json(textos: TextosGerados) -> str:
+    """
+    Serializa TextosGerados (dataclass) para JSON indentado.
+    Não usa model_dump_json() — TextosGerados é dataclass, não Pydantic.
+    """
+    return json.dumps(dataclasses.asdict(textos), ensure_ascii=False, indent=2)
 
 
 # ── validação determinística (sem LLM) ───────────────────────────────────────
@@ -107,7 +116,7 @@ def _parse_validacao(resposta_raw: str) -> ResultadoValidacao:
     except json.JSONDecodeError:
         return ResultadoValidacao(
             status=StatusValidacao.APROVADO_COM_RESSALVA,
-            ressalvas=["Resposta do validator não pôde ser parseada; revisão manual recomendada."],
+            observacoes=["Resposta do validator não pôde ser parseada; revisão manual recomendada."],
         )
 
     status_map = {
@@ -120,8 +129,8 @@ def _parse_validacao(resposta_raw: str) -> ResultadoValidacao:
     return ResultadoValidacao(
         status=status,
         erros=data.get("erros", []),
-        ressalvas=data.get("ressalvas", []),
         sugestoes_correcao=data.get("sugestoes_correcao", []),
+        observacoes=data.get("observacoes", data.get("ressalvas", [])),
     )
 
 
@@ -165,7 +174,7 @@ def validar_textos(
     sys_prompt = system_prompt_validator()
     usr_prompt = user_prompt_validator(
         ctx_atividade,
-        textos.model_dump_json(indent=2),
+        _textos_para_json(textos),   # ← dataclasses.asdict, não model_dump_json
     )
 
     logger.debug("Validator: validando atividade %s", ctx_atividade.codigo)
@@ -188,7 +197,7 @@ def validar_textos(
         logger.warning("Validator LLM falhou para %s: %s", ctx_atividade.codigo, e)
         return ResultadoValidacao(
             status=StatusValidacao.APROVADO_COM_RESSALVA,
-            ressalvas=["Validação LLM indisponível; aprovado com ressalva."],
+            observacoes=["Validação LLM indisponível; aprovado com ressalva."],
         )
 
     return _parse_validacao(resposta_raw)

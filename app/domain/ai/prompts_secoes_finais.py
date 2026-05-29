@@ -15,10 +15,24 @@ from __future__ import annotations
 from app.domain.projects.termo_outorga import ContextoProjeto
 
 
+def _meta_numero(m) -> str:
+    """Extrai 'numero' de MetaPactuada (dataclass/Pydantic) ou dict."""
+    if isinstance(m, dict):
+        return str(m.get("numero", ""))
+    return str(getattr(m, "numero", ""))
+
+
+def _meta_descricao(m) -> str:
+    """Extrai 'descricao' de MetaPactuada (dataclass/Pydantic) ou dict."""
+    if isinstance(m, dict):
+        return str(m.get("descricao", "") or m.get("titulo", ""))
+    return str(getattr(m, "descricao", "") or getattr(m, "titulo", ""))
+
+
 def system_prompt_secoes_finais(ctx_projeto: ContextoProjeto) -> str:
     metas_txt = ""
     for m in ctx_projeto.metas_pactuadas:
-        metas_txt += f"  - Meta {m.get('numero', '')}: {m.get('descricao', '')}\n"
+        metas_txt += f"  - Meta {_meta_numero(m)}: {_meta_descricao(m)}\n"
 
     return f"""Você é um especialista em redação de relatórios técnicos institucionais para projetos financiados por agências de fomento (FAPEMIG, FINEP, CNPq).
 
