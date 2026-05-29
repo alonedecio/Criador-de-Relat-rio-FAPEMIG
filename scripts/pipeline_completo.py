@@ -14,6 +14,9 @@ Etapas:
     4. Agentes IA geram textos por atividade (writer → validator → retry)
        → data/output/relatorio_com_textos.json
 
+    5. Writer seções finais (seções 5-10 do RAT)
+       → data/output/relatorio_final_completo.json
+
 Uso:
     # Pipeline completo
     python scripts/pipeline_completo.py
@@ -24,13 +27,16 @@ Uso:
     # Só agentes, limitado a 4 atividades de teste
     python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 6.1 16.1
 
+    # Só seções finais (atividades já geradas)
+    python scripts/pipeline_completo.py --etapa-inicio 5
+
     # Modelo específico
     python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 --model gemini-2.5-flash
 
 Variáveis de ambiente (.env):
     CLICKUP_API_TOKEN   — obrigatório para etapas 1 e 2
     CLICKUP_LIST_ID     — obrigatório para etapa 1
-    GEMINI_API_KEY      — obrigatório para etapa 4
+    GEMINI_API_KEY      — obrigatório para etapas 4 e 5
 
 Arquitetura LLM:
     Usa openai SDK apontando para a API do Google via base_url
@@ -59,7 +65,7 @@ logging.basicConfig(
 logger = logging.getLogger("pipeline_completo")
 
 # Modelo padrão — nome simples sem prefixo de provider
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 
 # ── paths canônicos ────────────────────────────────────────────────────────────
 BASE_DIR      = Path(__file__).resolve().parent.parent
@@ -67,11 +73,12 @@ STAGED_DIR    = BASE_DIR / "data" / "staged"
 INPUT_DIR     = BASE_DIR / "data" / "input"
 OUTPUT_DIR    = BASE_DIR / "data" / "output"
 
-BASE_SNAPSHOT     = STAGED_DIR / "clickup_base_snapshot.json"
-ENRICHED_SNAPSHOT = STAGED_DIR / "clickup_enriched_snapshot.json"
-RELATORIO_PROG    = OUTPUT_DIR / "relatorio_final_com_progresso.json"
-RELATORIO_TEXTOS  = OUTPUT_DIR / "relatorio_com_textos.json"
-PDF_PROJETO       = INPUT_DIR  / "termo_projeto.pdf"
+BASE_SNAPSHOT       = STAGED_DIR / "clickup_base_snapshot.json"
+ENRICHED_SNAPSHOT   = STAGED_DIR / "clickup_enriched_snapshot.json"
+RELATORIO_PROG      = OUTPUT_DIR / "relatorio_final_com_progresso.json"
+RELATORIO_TEXTOS    = OUTPUT_DIR / "relatorio_com_textos.json"
+RELATORIO_COMPLETO  = OUTPUT_DIR / "relatorio_final_completo.json"
+PDF_PROJETO         = INPUT_DIR  / "termo_projeto.pdf"
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
@@ -97,7 +104,6 @@ def _build_llm_client(model: str):
         logger.error("openai não instalado. Execute: pip install openai")
         sys.exit(1)
 
-    # Gemini via openai SDK + base_url (padrão Ed Donner)
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     openai_key = os.getenv("OPENAI_API_KEY", "")
 
@@ -113,11 +119,11 @@ def _build_llm_client(model: str):
             base_url=GEMINI_BASE_URL,
         )
 
-    # OpenAI nativo
     if not openai_key:
         logger.error("OPENAI_API_KEY não encontrada no .env")
         sys.exit(1)
     logger.info("LLM client: OpenAI SDK → OpenAI API (%s)", model)
+    from openai import OpenAI
     return OpenAI(api_key=openai_key)
 
 
@@ -265,29 +271,62 @@ def etapa_4_gerar_textos(
 
     total = sum(len(m.get("atividades", [])) for m in relatorio_final.get("metas", []))
     logger.info("")
-    logger.info("Pipeline concluído em %.1fs", elapsed)
-    logger.info("%d atividades no relatório final", total)
+    logger.info("Etapa 4 concluída em %.1fs", elapsed)
+    logger.info("%d atividades com textos gerados", total)
     logger.info("Resultado: %s", RELATORIO_TEXTOS)
+
+
+def etapa_5_secoes_finais(model: str) -> None:
+    _sep("ETAPA 5 — Writer seções finais (seções 5-10 do RAT)")
+
+    for path, nome in [
+        (PDF_PROJETO,      "Termo PDF"),
+        (RELATORIO_TEXTOS, "Relatório com textos das atividades"),
+    ]:
+        if not path.exists():
+            logger.error("%s não encontrado: %s\nRode a etapa anterior primeiro.", nome, path)
+            sys.exit(1)
+
+    client = _build_llm_client(model)
+
+    from app.application.use_cases.gerar_secoes_finais import executar
+
+    t0 = time.time()
+    relatorio_completo = executar(
+        termo_pdf_path=PDF_PROJETO,
+        relatorio_com_textos_path=RELATORIO_TEXTOS,
+        output_path=RELATORIO_COMPLETO,
+        llm_client=client,
+        model=model,
+    )
+    elapsed = time.time() - t0
+
+    secoes = relatorio_completo.get("secoes_finais", {})
+    campos_preenchidos = sum(1 for v in secoes.values() if v and v.strip())
+    logger.info("")
+    logger.info("Etapa 5 concluída em %.1fs", elapsed)
+    logger.info("%d/9 campos de seções finais preenchidos", campos_preenchidos)
+    logger.info("Resultado final: %s", RELATORIO_COMPLETO)
 
 
 # ── main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Pipeline completo: ClickUp → enriquecimento → progresso → textos IA"
+        description="Pipeline completo: ClickUp → enriquecimento → progresso → textos IA → seções finais"
     )
     parser.add_argument(
         "--etapa-inicio",
         type=int,
         default=1,
-        choices=[1, 2, 3, 4],
-        help="Etapa a partir da qual iniciar (1=base, 2=enriched, 3=progresso, 4=textos)",
+        choices=[1, 2, 3, 4, 5],
+        help="Etapa a partir da qual iniciar (1=base, 2=enriched, 3=progresso, 4=textos, 5=seções finais)",
     )
     parser.add_argument(
         "--model",
         type=str,
         default=DEFAULT_MODEL,
-        help=f"Modelo para etapa 4 (padrão: {DEFAULT_MODEL})",
+        help=f"Modelo para etapas 4 e 5 (padrão: {DEFAULT_MODEL})",
     )
     parser.add_argument(
         "--tentativas",
@@ -317,6 +356,8 @@ def main() -> None:
             max_tentativas=args.tentativas,
             atividades_filtro=args.atividades,
         )
+    if inicio <= 5:
+        etapa_5_secoes_finais(model=args.model)
 
 
 if __name__ == "__main__":
