@@ -8,9 +8,10 @@ from typing import Optional
 
 
 class StatusValidacao(str, Enum):
-    APROVADO   = "aprovado"
-    REPROVADO  = "reprovado"
-    INCOMPLETO = "incompleto"
+    APROVADO              = "aprovado"
+    APROVADO_COM_RESSALVA = "aprovado_com_ressalva"
+    REPROVADO             = "reprovado"
+    INCOMPLETO            = "incompleto"
 
 
 @dataclass
@@ -22,11 +23,33 @@ class TextosGerados:
 
 
 @dataclass
+class ResultadoValidacao:
+    """
+    Saída do validator após avaliar os textos gerados pelo writer.
+    Retornado por app.domain.ai.validator.validar_textos().
+    """
+    status:              StatusValidacao
+    erros:               list[str] = field(default_factory=list)
+    sugestoes_correcao:  list[str] = field(default_factory=list)
+    observacoes:         list[str] = field(default_factory=list)
+
+
+@dataclass
 class AuditoriaAtividade:
-    atividade_id:  str
-    tentativas:    int
-    status:        StatusValidacao
-    feedbacks:     list[str] = field(default_factory=list)
+    """
+    Registro auditável do ciclo writer → validator → retry de uma atividade.
+    status_final reflete o status da última (ou melhor) validação.
+    """
+    atividade_id:      str
+    tentativas:        int
+    status_final:      StatusValidacao
+    erros_encontrados: list[str] = field(default_factory=list)
+    fontes_contexto:   list[str] = field(default_factory=list)
+
+    # Compat: alias status → status_final para leitores do JSON antigo
+    @property
+    def status(self) -> StatusValidacao:
+        return self.status_final
 
 
 @dataclass
