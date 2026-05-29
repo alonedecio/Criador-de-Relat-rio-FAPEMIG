@@ -32,6 +32,7 @@ ATENÇÃO — REGRAS INEGOCIÁVEIS:
 5. Os três campos são independentes. Não repita a mesma frase nos três.
 6. O campo 'justificativa' só deve ser preenchido com conteúdo substantivo quando houver atraso ou adiantamento real. Se a atividade está no prazo, escreva "A atividade encontra-se dentro do cronograma previsto."
 7. SOBRE ANEXOS: quando a atividade possui anexos registrados, você pode mencionar a existência do anexo como evidência de execução e, pelo título, inferir o tipo de evidência (ex: se o título contém "planilha", "lista", "ata", "relatório", "fotos", "certificado", infira o que representa). Não invente o conteúdo do anexo — apenas reconheça sua existência como indicador de execução.
+8. SOBRE ITENS DE AÇÃO: quando campos customizados (customfields) da task estão disponíveis, use-os como evidência adicional sobre o estado e resultado da atividade. Não invente valores não listados.
 
 
 CONTEXTO DO PROJETO (use para dar coerência institucional aos textos):
@@ -39,11 +40,35 @@ CONTEXTO DO PROJETO (use para dar coerência institucional aos textos):
 """
 
 
+def _fmt_customfields(customfields: list[dict]) -> str:
+    """
+    Formata customfields da task para exibição no prompt.
+    Filtra campos sem valor e limita a 10 itens.
+    """
+    linhas = []
+    for cf in customfields:
+        nome = cf.get("name") or cf.get("field_name") or ""
+        valor = (
+            cf.get("value")
+            or cf.get("value_richtext")
+            or cf.get("type_config", {}).get("default", "")
+            or ""
+        )
+        if nome and valor and str(valor).strip():
+            linhas.append(f"  {nome}: {str(valor).strip()[:200]}")
+        if len(linhas) >= 10:
+            break
+    return "\n".join(linhas) if linhas else "  Nenhum campo customizado com valor registrado."
+
+
 def user_prompt_writer(ctx: ContextoAtividade) -> str:
     """
     User prompt dinâmico por atividade.
     Monta o bloco de contexto factual disponível.
     """
+    # Indica explicitamente a origem do título para o writer
+    origem_titulo = "ClickUp (título original da task)" if ctx.task_id else "Relatório canônico (task não encontrada no snapshot)"
+
     # Progresso
     prog = ctx.progresso
     if prog:
@@ -94,41 +119,50 @@ def user_prompt_writer(ctx: ContextoAtividade) -> str:
     else:
         anexos_txt = "  Nenhum anexo registrado."
 
+    # Customfields (itens de ação e campos extras da task)
+    customfields = getattr(ctx, "customfields", None) or []
+    customfields_txt = _fmt_customfields(customfields)
+
     return f"""Preencha os três campos textuais da atividade abaixo com base EXCLUSIVAMENTE nas informações fornecidas.
 
 
-━━ IDENTIFICAÇÃO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ IDENTIFICAÇÃO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Meta: {ctx.meta_codigo}
 Atividade: {ctx.codigo} — {ctx.titulo}
+Origem do título: {origem_titulo}
 Status no ClickUp: {ctx.status}
 Responsáveis: {', '.join(ctx.responsaveis) or 'Não informado'}
 Data início prevista: {ctx.data_inicio or 'Não informada'}
 Data fim prevista: {ctx.data_fim or 'Não informada'}
 
 
-━━ PROGRESSO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ PROGRESSO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {progresso_bloco}
 
 
-━━ DESCRIÇÃO DA ATIVIDADE (ClickUp) ━━━━━━━━━━━━
+━━ DESCRIÇÃO DA ATIVIDADE (ClickUp) ━━━━━━━━━━━━━━━━━
 {ctx.descricao or 'Sem descrição registrada.'}
 
 
-━━ COMENTÁRIOS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━
+━━ ITENS DE AÇÃO / CAMPOS CUSTOMIZADOS (ClickUp) ━━━━━━━
+{customfields_txt}
+
+
+━━ COMENTÁRIOS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━━━
 {comentarios_txt}
 
 
-━━ CHECKLISTS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━━
+━━ CHECKLISTS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {checklists_txt}
 
 
-━━ ANEXOS REGISTRADOS (ClickUp) ━━━━━━━━━━━━━━━━
+━━ ANEXOS REGISTRADOS (ClickUp) ━━━━━━━━━━━━━━━━━━━
 {anexos_txt}
 (Você não tem acesso ao conteúdo dos anexos. Use o título como indicador
  do tipo de evidência produzida. Não invente o conteúdo.)
 
 
-━━ CAMPOS A PREENCHER ━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ CAMPOS A PREENCHER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Responda em JSON com exatamente estas três chaves:
 
 {{
@@ -154,6 +188,7 @@ Sua função é verificar se os textos gerados pelo writer estão:
 5. Sem contradição com as metas pactuadas no termo de outorga
 6. Com justificativa consistente: presente quando há atraso/adiantamento real, neutra quando no prazo
 7. Sobre anexos: verificar se o writer mencionou anexos de forma coerente — se há anexos registrados e a atividade está concluída, o texto de resultados deve reconhecer a existência de evidência
+8. Sobre itens de ação: verificar se o writer fez uso coerente dos customfields quando disponíveis
 
 
 Responda em JSON com exatamente este formato:
@@ -193,6 +228,17 @@ def user_prompt_validator(
     else:
         anexos_resumo = "Nenhum"
 
+    # Customfields para o validator verificar aderência
+    customfields = getattr(ctx, "customfields", None) or []
+    if customfields:
+        cf_resumo = "; ".join(
+            f"{cf.get('name','')}: {cf.get('value','')}"
+            for cf in customfields[:5]
+            if cf.get('name') and cf.get('value')
+        ) or "Nenhum com valor"
+    else:
+        cf_resumo = "Nenhum"
+
     return f"""Valide os textos abaixo gerados para a atividade.
 
 
@@ -200,8 +246,10 @@ ATIVIDADE: {ctx.codigo} — {ctx.titulo}
 STATUS CLICKUP: {ctx.status}
 SITUAÇÃO NO PRAZO: {situacao}
 REALIZADO %: {realizado}
+TÍTULO ORIGEM: {'ClickUp' if ctx.task_id else 'Relatório canônico (sem task)'}
 DESCRIÇÃO ORIGINAL: {(ctx.descricao or '')[:400]}
 ANEXOS REGISTRADOS: {anexos_resumo}
+CAMPOS CUSTOMIZADOS: {cf_resumo}
 
 COMENTÁRIOS DISPONÍVEIS ({len(ctx.comentarios)}):
 {comentarios_resumo}
