@@ -2,8 +2,8 @@
 Montagem de prompts para writer e validator.
 
 Design:
-- system_prompt_writer: injetado UMA VEZ com o ContextoProjeto (estático)
-- user_prompt_writer:   injetado por atividade com o ContextoAtividade (dinâmico)
+- system_prompt_writer:    injetado UMA VEZ com o ContextoProjeto (estático)
+- user_prompt_writer:      injetado por atividade com o ContextoAtividade (dinâmico)
 - system_prompt_validator: instruções fixas do validator
 - user_prompt_validator:   textos gerados + contexto para validação
 
@@ -23,6 +23,7 @@ def system_prompt_writer(ctx_projeto: ContextoProjeto) -> str:
     """
     return f"""Você é um redator técnico especializado em relatórios institucionais de projetos financiados por agências de fomento. Seu objetivo é preencher três campos textuais de cada atividade de um relatório de prestação de contas.
 
+
 ATENÇÃO — REGRAS INEGOCIÁVEIS:
 1. Use SOMENTE as informações fornecidas no contexto da atividade. Nunca invente dados, datas, resultados ou entregas não registrados.
 2. Escreva em linguagem técnica, formal, em terceira pessoa, compatível com relatórios de prestação de contas para agências de fomento.
@@ -30,6 +31,8 @@ ATENÇÃO — REGRAS INEGOCIÁVEIS:
 4. Se não houver informação suficiente para um campo, escreva "Não há registros disponíveis para este período." — nunca deixe o campo vazio com conteúdo inventado.
 5. Os três campos são independentes. Não repita a mesma frase nos três.
 6. O campo 'justificativa' só deve ser preenchido com conteúdo substantivo quando houver atraso ou adiantamento real. Se a atividade está no prazo, escreva "A atividade encontra-se dentro do cronograma previsto."
+7. SOBRE ANEXOS: quando a atividade possui anexos registrados, você pode mencionar a existência do anexo como evidência de execução e, pelo título, inferir o tipo de evidência (ex: se o título contém "planilha", "lista", "ata", "relatório", "fotos", "certificado", infira o que representa). Não invente o conteúdo do anexo — apenas reconheça sua existência como indicador de execução.
+
 
 CONTEXTO DO PROJETO (use para dar coerência institucional aos textos):
 {ctx_projeto.resumo_para_prompt()}
@@ -78,7 +81,21 @@ def user_prompt_writer(ctx: ContextoAtividade) -> str:
         else "  Nenhum checklist registrado."
     )
 
+    # Anexos — título como evidência inferível
+    def _fmt_anexo(a) -> str:
+        if isinstance(a, dict):
+            titulo = a.get("title") or a.get("name") or a.get("filename") or str(a)
+        else:
+            titulo = str(a)
+        return f"  - {titulo}"
+
+    if ctx.anexos:
+        anexos_txt = "\n".join(_fmt_anexo(a) for a in ctx.anexos[:10])
+    else:
+        anexos_txt = "  Nenhum anexo registrado."
+
     return f"""Preencha os três campos textuais da atividade abaixo com base EXCLUSIVAMENTE nas informações fornecidas.
+
 
 ━━ IDENTIFICAÇÃO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Meta: {ctx.meta_codigo}
@@ -88,17 +105,28 @@ Responsáveis: {', '.join(ctx.responsaveis) or 'Não informado'}
 Data início prevista: {ctx.data_inicio or 'Não informada'}
 Data fim prevista: {ctx.data_fim or 'Não informada'}
 
+
 ━━ PROGRESSO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {progresso_bloco}
+
 
 ━━ DESCRIÇÃO DA ATIVIDADE (ClickUp) ━━━━━━━━━━━━
 {ctx.descricao or 'Sem descrição registrada.'}
 
+
 ━━ COMENTÁRIOS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━
 {comentarios_txt}
 
+
 ━━ CHECKLISTS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━━
 {checklists_txt}
+
+
+━━ ANEXOS REGISTRADOS (ClickUp) ━━━━━━━━━━━━━━━━
+{anexos_txt}
+(Você não tem acesso ao conteúdo dos anexos. Use o título como indicador
+ do tipo de evidência produzida. Não invente o conteúdo.)
+
 
 ━━ CAMPOS A PREENCHER ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Responda em JSON com exatamente estas três chaves:
@@ -109,12 +137,14 @@ Responda em JSON com exatamente estas três chaves:
   "justificativa": "<Justifique o eventual atraso ou adiantamento da execução da tarefa em relação à previsão inicial.>"
 }}
 
+
 Não adicione nenhuma chave além das três acima. Não inclua markdown. Responda apenas com o JSON.
 """
 
 
 def system_prompt_validator() -> str:
     return """Você é um validador de textos para relatórios institucionais de projetos financiados por agências de fomento.
+
 
 Sua função é verificar se os textos gerados pelo writer estão:
 1. Factualmente aderentes ao contexto fornecido — sem inventar dados ou entregas
@@ -123,6 +153,8 @@ Sua função é verificar se os textos gerados pelo writer estão:
 4. Em tom técnico-institucional adequado (3ª pessoa, formal, sem coloquialismo)
 5. Sem contradição com as metas pactuadas no termo de outorga
 6. Com justificativa consistente: presente quando há atraso/adiantamento real, neutra quando no prazo
+7. Sobre anexos: verificar se o writer mencionou anexos de forma coerente — se há anexos registrados e a atividade está concluída, o texto de resultados deve reconhecer a existência de evidência
+
 
 Responda em JSON com exatamente este formato:
 {{
@@ -142,17 +174,42 @@ def user_prompt_validator(
     situacao = prog.situacao_prazo if prog else "desconhecida"
     realizado = prog.realizado_percentual if prog else None
 
+    # Passa os primeiros comentários reais para o validator verificar aderência factual
+    if ctx.comentarios:
+        comentarios_resumo = "\n".join(
+            f"  [{i+1}] {c[:200]}" for i, c in enumerate(ctx.comentarios[:5])
+        )
+    else:
+        comentarios_resumo = "  Nenhum comentário registrado."
+
+    # Informa títulos de anexos ao validator
+    def _titulo_anexo(a) -> str:
+        if isinstance(a, dict):
+            return a.get("title") or a.get("name") or a.get("filename") or str(a)
+        return str(a)
+
+    if ctx.anexos:
+        anexos_resumo = "; ".join(_titulo_anexo(a) for a in ctx.anexos[:5])
+    else:
+        anexos_resumo = "Nenhum"
+
     return f"""Valide os textos abaixo gerados para a atividade.
+
 
 ATIVIDADE: {ctx.codigo} — {ctx.titulo}
 STATUS CLICKUP: {ctx.status}
 SITUAÇÃO NO PRAZO: {situacao}
 REALIZADO %: {realizado}
-DESCRIÇÃO ORIGINAL: {(ctx.descricao or '')[:300]}
-COMENTÁRIOS DISPONÍVEIS: {len(ctx.comentarios)} comentário(s)
+DESCRIÇÃO ORIGINAL: {(ctx.descricao or '')[:400]}
+ANEXOS REGISTRADOS: {anexos_resumo}
+
+COMENTÁRIOS DISPONÍVEIS ({len(ctx.comentarios)}):
+{comentarios_resumo}
+
 
 TEXTOS GERADOS:
 {textos_json}
+
 
 Responda apenas com o JSON de validação.
 """

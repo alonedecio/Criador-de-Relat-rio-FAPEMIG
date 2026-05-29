@@ -1,5 +1,5 @@
 """
-Extração de contexto institucional do Termo de Outorga (PDF).
+Extração de contexto institucional do Termo de Outorga (PDF FAPEMIG).
 
 Responsabilidades:
 - Ler o PDF do termo via ProjetoPDFIndexado (pdf_reader já existente)
@@ -8,6 +8,15 @@ Responsabilidades:
 
 O ContextoProjeto é contexto ESTÁTICO de nível projeto.
 Diferente do ContextoAtividade, que é dinâmico por atividade.
+
+Formato do PDF FAPEMIG (Plano de Trabalho):
+  - Metas listadas na seção "Metas" como:
+      Meta:
+      1 - Criar e estruturar fisicamente...
+      Meta:
+      2 - Formalizar o CIEU...
+  - Objetivos específicos embutidos no campo "03. Objetivo geral e específico(s);"
+    como parágrafo único com numeração: "Objetivos específicos: 1. ... 2. ..."
 """
 from __future__ import annotations
 
@@ -57,7 +66,7 @@ class ContextoProjeto:
             f"  Meta {m.numero}: {m.descricao[:120]}"
             for m in self.metas_pactuadas
         )
-        objs_txt = "\n".join(f"  - {o[:120]}" for o in self.objetivos_especificos)
+        objs_txt = "\n".join(f"  {i+1}. {o[:150]}" for i, o in enumerate(self.objetivos_especificos))
         vocab_txt = ", ".join(self.vocabulario_chave) if self.vocabulario_chave else "N/D"
 
         return (
@@ -84,24 +93,37 @@ def _norm(texto: str) -> str:
 
 # ── regexes ──────────────────────────────────────────────────────────────────
 
+# Objetivo geral: extrai do parágrafo após "Objetivo Geral:"
 _RE_OBJETIVO_GERAL = re.compile(
-    r"objetivo\s+geral[:\s]+(.+?)(?=objetivo\s+especif|meta|\n\n|$)",
+    r"objetivo\s+geral\s*:\s*(.+?)(?=objetivos?\s+especif|$)",
     re.IGNORECASE | re.DOTALL,
 )
 
+# Objetivos específicos: bloco após "Objetivos específicos:", antes da próxima seção
 _RE_OBJ_ESPECIFICOS = re.compile(
-    r"objetivos?\s+especif[^:]*:[\s]*(.+?)(?=meta\s+\d|\n\n\n|$)",
+    r"objetivos?\s+especif[^:]*:\s*(.+?)(?=\n\n|\d{2}\.|$)",
     re.IGNORECASE | re.DOTALL,
 )
 
-_RE_META_BLOCO = re.compile(
-    r"meta\s+(\d+)[^\n]*[:\-]?\s*([^\n]{10,})",
+# Metas no formato FAPEMIG:
+#   Meta:\n1 - Criar e estruturar...
+#   Meta:\n2 - Formalizar...
+# Captura o número e o texto em linha separada do marcador "Meta:"
+_RE_META_FAPEMIG = re.compile(
+    r"meta\s*:\s*\n\s*(\d+)\s*[-–]\s*([^\n]{10,})",
+    re.IGNORECASE,
+)
+
+# Fallback: "Meta N - descricao" ou "Meta N: descricao" em linha única
+_RE_META_INLINE = re.compile(
+    r"meta\s+(\d+)\s*[-–:]\s*([^\n]{10,})",
     re.IGNORECASE,
 )
 
 _RE_VIGENCIA = re.compile(
-    r"vig[eê]ncia[^:]*:[^\n]*([\d]{2}/[\d]{2}/[\d]{4})[^\n]*([\d]{2}/[\d]{2}/[\d]{4})",
-    re.IGNORECASE,
+    r"data\s+de\s+in[ií]cio[^:\n]*:\s*([\d]{2}/[\d]{2}/[\d]{4}).*?"
+    r"data\s+t[eé]rmino[^:\n]*:\s*([\d]{2}/[\d]{2}/[\d]{4})",
+    re.IGNORECASE | re.DOTALL,
 )
 
 _RE_FINANCIADOR = re.compile(
@@ -110,7 +132,7 @@ _RE_FINANCIADOR = re.compile(
 )
 
 _RE_TITULO = re.compile(
-    r"(?:t[ií]tulo|projeto)[^:\n]*:[\s]*([^\n]{10,})",
+    r"t[ií]tulo\s*:\s*\n?([^\n]{10,})",
     re.IGNORECASE,
 )
 
@@ -120,7 +142,9 @@ _VOCAB_SEED = [
     "empreendedorismo", "bootcamp", "design thinking",
     "modelagem de negócios", "mentoria", "prototipagem",
     "trilha de formação", "empresa júnior", "núcleo de estudo",
-    "CIEU", "UFLA", "FAPEMIG", "SEDE",
+    "CIEU", "UFLA", "FAPEMIG", "SEDE", "IpêStart", "IpêTech",
+    "INBATEC", "pitch", "hackathon", "pré-incubação",
+    "ideação",
 ]
 
 
@@ -147,51 +171,68 @@ def _extrair_vigencia(texto: str) -> str:
     m = _RE_VIGENCIA.search(texto)
     if m:
         return f"{m.group(1)} a {m.group(2)}"
+    # fallback: busca por datas isoladas de início e fim
+    datas = re.findall(r"[\d]{2}/[\d]{2}/[\d]{4}", texto)
+    if len(datas) >= 2:
+        return f"{datas[0]} a {datas[1]}"
     return ""
 
 
-def _extrair_objetivo_geral(texto_norm: str, texto_orig: str) -> str:
-    m = _RE_OBJETIVO_GERAL.search(texto_norm)
+def _extrair_objetivo_geral(texto: str) -> str:
+    m = _RE_OBJETIVO_GERAL.search(texto)
     if m:
-        # recupera trecho equivalente no texto original para manter acentos
-        inicio = m.start(1)
-        fim = m.end(1)
-        trecho = texto_orig[inicio:fim].strip()
+        trecho = m.group(1).strip()
+        # Remove o bloco de objetivos específicos se capturado junto
+        trecho = re.split(r"objetivos?\s+especif", trecho, flags=re.IGNORECASE)[0]
         return " ".join(trecho.split())[:600]
     return "Objetivo geral não identificado no documento."
 
 
-def _extrair_objetivos_especificos(texto_norm: str, texto_orig: str) -> list[str]:
-    m = _RE_OBJ_ESPECIFICOS.search(texto_norm)
+def _extrair_objetivos_especificos(texto: str) -> list[str]:
+    m = _RE_OBJ_ESPECIFICOS.search(texto)
     if not m:
         return []
-    inicio = m.start(1)
-    fim = m.end(1)
-    bloco = texto_orig[inicio:fim]
-    # quebra por marcadores de lista ou ponto-e-vírgula
-    itens = re.split(r"[;\n]|(?<=\.)\s+(?=[a-záéíóúA-ZÁÉÍÓÚ])", bloco)
+    bloco = m.group(1).strip()
+    # Quebra por padrão de numeração: "1. ", "2. " etc.
+    itens = re.split(r"(?=\d+\.\s)", bloco)
     result = []
     for item in itens:
-        item = item.strip().lstrip("•-–·*abcdefghijklmnopqrstuvwxyz) ").strip()
+        item = re.sub(r"^\d+\.\s*", "", item).strip()
+        item = " ".join(item.split())
         if len(item) > 15:
             result.append(item[:300])
     return result[:10]  # máximo 10 objetivos
 
 
-def _extrair_metas(texto_norm: str, texto_orig: str) -> list[MetaPactuada]:
-    metas = []
+def _extrair_metas(texto: str) -> list[MetaPactuada]:
+    """
+    Extrai metas no formato FAPEMIG:
+      Meta:\n1 - Criar e estruturar...
+    Com fallback para formato inline:
+      Meta 1 - Criar e estruturar...
+    """
     vistas: set[str] = set()
-    for m in _RE_META_BLOCO.finditer(texto_norm):
+    metas: list[MetaPactuada] = []
+
+    # Tenta formato FAPEMIG primeiro ("Meta:\n1 - descricao")
+    for m in _RE_META_FAPEMIG.finditer(texto):
         numero = m.group(1)
         if numero in vistas:
             continue
         vistas.add(numero)
-        # recupera descrição no texto original com acentos
-        inicio = m.start(2)
-        fim = m.end(2)
-        descricao = texto_orig[inicio:fim].strip()
-        descricao = " ".join(descricao.split())[:300]
+        descricao = " ".join(m.group(2).split())[:300]
         metas.append(MetaPactuada(numero=numero, descricao=descricao))
+
+    # Fallback: formato inline ("Meta 1 - descricao")
+    if not metas:
+        for m in _RE_META_INLINE.finditer(texto):
+            numero = m.group(1)
+            if numero in vistas:
+                continue
+            vistas.add(numero)
+            descricao = " ".join(m.group(2).split())[:300]
+            metas.append(MetaPactuada(numero=numero, descricao=descricao))
+
     return sorted(metas, key=lambda x: int(x.numero))
 
 
@@ -205,7 +246,7 @@ def _extrair_vocabulario(texto: str) -> list[str]:
 
 def extrair_contexto_projeto(pdf: ProjetoPDFIndexado) -> ContextoProjeto:
     """
-    Extrai o ContextoProjeto a partir do PDF do Termo de Outorga.
+    Extrai o ContextoProjeto a partir do PDF do Termo de Outorga FAPEMIG.
 
     Args:
         pdf: ProjetoPDFIndexado já carregado pelo pdf_reader existente.
@@ -214,14 +255,13 @@ def extrair_contexto_projeto(pdf: ProjetoPDFIndexado) -> ContextoProjeto:
         ContextoProjeto pronto para ser injetado no system prompt dos agentes.
     """
     texto_orig = pdf.texto_completo
-    texto_norm = _norm(texto_orig)
 
     return ContextoProjeto(
         titulo_projeto=_extrair_titulo(texto_orig),
         financiador=_extrair_financiador(texto_orig),
         vigencia=_extrair_vigencia(texto_orig),
-        objetivo_geral=_extrair_objetivo_geral(texto_norm, texto_orig),
-        objetivos_especificos=_extrair_objetivos_especificos(texto_norm, texto_orig),
-        metas_pactuadas=_extrair_metas(texto_norm, texto_orig),
+        objetivo_geral=_extrair_objetivo_geral(texto_orig),
+        objetivos_especificos=_extrair_objetivos_especificos(texto_orig),
+        metas_pactuadas=_extrair_metas(texto_orig),
         vocabulario_chave=_extrair_vocabulario(texto_orig),
     )
