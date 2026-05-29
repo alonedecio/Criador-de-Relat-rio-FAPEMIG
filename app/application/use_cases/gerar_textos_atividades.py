@@ -84,7 +84,7 @@ def executar(
     clickup_snapshot_path: Path,
     output_path: Path,
     llm_client,
-    model: str = "gemini-2.5-flash",
+    model: str = "gemini-2.5-flash-lite",
     max_tentativas: int = 3,
     atividades_filtro: Optional[list[str]] = None,
 ) -> dict:

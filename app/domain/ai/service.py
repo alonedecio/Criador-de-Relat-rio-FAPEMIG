@@ -39,7 +39,7 @@ class AIService:
         self,
         llm_client,
         ctx_projeto: ContextoProjeto,
-        model: str = "gpt-4o",
+        model: str = "gemini-2.5-flash-lite",
         max_tentativas: int = 3,
     ):
         self.llm_client      = llm_client

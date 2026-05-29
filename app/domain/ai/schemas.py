@@ -1,63 +1,58 @@
 """
-Schemas Pydantic para o pipeline de agentes IA.
-
-Hierarquia:
-    ContextoProjeto      — estático, nível projeto  (vem de termo_outorga.py)
-    ContextoAtividade    — dinâmico, por atividade   (vem de context/builders.py)
-    TextosGerados        — saída do writer
-    ResultadoValidacao   — saída do validator
-    ResultadoAtividade   — produto final por atividade (writer + auditoria)
+Schemas de dados dos agentes IA.
 """
 from __future__ import annotations
-
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
 
 
 class StatusValidacao(str, Enum):
-    APROVADO = "aprovado"
-    REPROVADO = "reprovado"
-    APROVADO_COM_RESSALVA = "aprovado_com_ressalva"
+    APROVADO   = "aprovado"
+    REPROVADO  = "reprovado"
+    INCOMPLETO = "incompleto"
 
 
-class TextosGerados(BaseModel):
-    """Saída estruturada do writer para uma atividade."""
-    desenvolvimento: str = Field(
-        description="Descrição narrativa do desenvolvimento da atividade."
-    )
-    resultados: str = Field(
-        description="Comentário sobre resultado(s) ou ausência deles."
-    )
-    justificativa: str = Field(
-        description=(
-            "Justificativa do atraso ou adiantamento em relação à previsão. "
-            "Vazio se a atividade está no prazo."
-        )
-    )
+@dataclass
+class TextosGerados:
+    """Saída do writer para uma atividade (3 campos)."""
+    desenvolvimento: str = ""
+    resultados:      str = ""
+    justificativa:   str = ""
 
 
-class ResultadoValidacao(BaseModel):
-    """Saída do validator após análise dos textos gerados."""
-    status: StatusValidacao
-    erros: list[str] = Field(default_factory=list)
-    ressalvas: list[str] = Field(default_factory=list)
-    sugestoes_correcao: list[str] = Field(default_factory=list)
+@dataclass
+class AuditoriaAtividade:
+    atividade_id:  str
+    tentativas:    int
+    status:        StatusValidacao
+    feedbacks:     list[str] = field(default_factory=list)
 
 
-class AuditoriaAtividade(BaseModel):
-    """Trilha auditável de uma atividade processada."""
+@dataclass
+class ResultadoAtividade:
     atividade_id: str
-    tentativas: int
-    status_final: StatusValidacao
-    erros_encontrados: list[str] = Field(default_factory=list)
-    fontes_contexto: list[str] = Field(default_factory=list)  # clickup, pdf, progresso
+    meta_codigo:  str
+    titulo:       str
+    textos:       Optional[TextosGerados]
+    auditoria:    AuditoriaAtividade
 
 
-class ResultadoAtividade(BaseModel):
-    """Produto final por atividade: textos aprovados + auditoria."""
-    atividade_id: str
-    meta_codigo: str
-    titulo: str
-    textos: TextosGerados
-    auditoria: AuditoriaAtividade
+@dataclass
+class TextosSecaoFinal:
+    """Saída do writer para as seções finais do relatório (5-10)."""
+    # Seção 5 — Avaliação da gestão
+    capacitacoes_equipe:       str = ""
+    melhorias_instalacoes:     str = ""
+    dificuldades_nao_tecnicas: str = ""
+    # Seção 6 — Impactos
+    impactos_internos:         str = ""
+    impactos_externos:         str = ""
+    # Seção 7 — Produção tecnológica
+    producao_tecnologica:      str = ""
+    # Seção 8 — Parcerias
+    parcerias_institucionais:  str = ""
+    # Seção 9 — Comentário final
+    comentario_final:          str = ""
+    # Seção 10 — Resumo
+    resumo:                    str = ""
