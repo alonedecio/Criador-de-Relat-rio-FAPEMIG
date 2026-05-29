@@ -59,6 +59,26 @@ class AIService:
             model=self.model,
             max_tentativas=self.max_tentativas,
         )
+
+        # Registra rastreabilidade da origem do contexto
+        if not auditoria.fontes_contexto:
+            fontes = []
+            if ctx_atividade.task_id:
+                fontes.append(f"clickup:{ctx_atividade.task_id}")
+            else:
+                fontes.append("sem_task_clickup")
+            if ctx_atividade.progresso:
+                fontes.append("progresso_calculado")
+            if ctx_atividade.descricao:
+                fontes.append("descricao_clickup")
+            if ctx_atividade.comentarios:
+                fontes.append(f"{len(ctx_atividade.comentarios)}_comentarios")
+            if ctx_atividade.checklists:
+                fontes.append(f"{len(ctx_atividade.checklists)}_checklists")
+            if ctx_atividade.anexos:
+                fontes.append(f"{len(ctx_atividade.anexos)}_anexos")
+            auditoria.fontes_contexto = fontes
+
         return ResultadoAtividade(
             atividade_id=auditoria.atividade_id,
             meta_codigo=ctx_atividade.meta_codigo,
@@ -84,12 +104,20 @@ class AIService:
         """
         resultados: list[ResultadoAtividade] = []
 
+        sem_clickup = [c.codigo for c in contextos if not c.task_id]
+        if sem_clickup:
+            logger.warning(
+                "[AIService] %d atividade(s) sem task_id do ClickUp (contexto limitado): %s",
+                len(sem_clickup), sem_clickup,
+            )
+
         for i, ctx in enumerate(contextos, 1):
             logger.info(
-                "[%d/%d] Processando atividade %s — %s",
+                "[%d/%d] Processando atividade %s — %s%s",
                 i, len(contextos),
                 ctx.codigo,
                 ctx.titulo[:60],
+                " [sem task ClickUp]" if not ctx.task_id else "",
             )
             try:
                 resultado = self.processar_atividade(ctx)
