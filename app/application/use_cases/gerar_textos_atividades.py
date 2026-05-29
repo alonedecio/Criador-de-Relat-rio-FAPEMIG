@@ -9,13 +9,20 @@ Orquestra todo o pipeline de ponta a ponta:
     2. Carrega o relatório canônico com progresso (JSON)
 
     3. Para cada atividade do relatório:
-       → busca a task enriquecida do ClickUp pelo atividadeId
+       → busca a task enriquecida do ClickUp pelo task_id (atividade_id) OU pelo código da atividade
+       → título da atividade: usa task.base.name (ClickUp) quando task encontrada
        → monta o ContextoAtividade (builder existente)
 
     4. Executa AIService.processar_relatorio()
        → writer → validator → retry → merger
 
     5. Salva o relatório final com textos em output/
+
+Indexação do snapshot:
+    Duplo índice para lookup robusto:
+      - idx_by_id:     task_id (ClickUp ID) → ClickUpTaskEnriched
+      - idx_by_codigo: código da atividade (ex: '2.1') → ClickUpTaskEnriched
+                       Resolve o campo 'codigo' do snapshot se disponível.
 
 Arquitetura LLM:
     Recebe llm_client já instanciado pelo pipeline_completo.py
@@ -51,7 +58,8 @@ def _get_ativ_id(atividade: dict) -> str:
     )
 
 
-def _get_titulo(atividade: dict, codigo: str) -> str:
+def _get_titulo_canonical(atividade: dict, codigo: str) -> str:
+    """Título canônico do relatório — usado apenas como fallback."""
     return (
         atividade.get("titulo")
         or atividade.get("titulo_original")
@@ -76,6 +84,72 @@ def _iter_atividades(relatorio: dict):
         yield from meta.get("atividades", [])
     for item in relatorio.get("itens", []):
         yield from item.get("atividades", [])
+
+
+def _build_snapshot_indexes(
+    snapshot_raw: dict | list,
+) -> tuple[dict, dict]:
+    """
+    Constrói dois índices a partir do snapshot enriquecido:
+
+      idx_by_id:     task_id (ClickUp ID)        → ClickUpTaskEnriched
+      idx_by_codigo: código da atividade (N.N)   → ClickUpTaskEnriched
+
+    Suporta tanto envelope {"tasks": [...]} quanto lista direta.
+    Usa ClickUpEnrichedSnapshot para deserialização robusta.
+    """
+    from app.domain.clickup.models import ClickUpEnrichedSnapshot, ClickUpTaskEnriched
+
+    # Tenta deserializar via envelope tipado
+    try:
+        if isinstance(snapshot_raw, dict) and "tasks" in snapshot_raw:
+            envelope = ClickUpEnrichedSnapshot(**snapshot_raw)
+            tasks = envelope.tasks
+        elif isinstance(snapshot_raw, list):
+            # lista direta de tasks enriquecidas
+            tasks = []
+            for item in snapshot_raw:
+                try:
+                    tasks.append(ClickUpTaskEnriched(**item))
+                except Exception as e:
+                    logger.debug("Task malformada ignorada no snapshot: %s", e)
+        else:
+            tasks = []
+            logger.warning("Formato de snapshot não reconhecido: %s", type(snapshot_raw))
+    except Exception as e:
+        logger.error("Falha ao deserializar snapshot via ClickUpEnrichedSnapshot: %s", e)
+        tasks = []
+
+    idx_by_id:     dict = {}
+    idx_by_codigo: dict = {}
+
+    for task in tasks:
+        # Índice primário: task_id
+        if task.task_id:
+            idx_by_id[task.task_id] = task
+
+        # Índice secundário: campo 'codigo' explícito no snapshot (se existir)
+        codigo_snapshot = getattr(task, "codigo", None)
+        if codigo_snapshot:
+            idx_by_codigo[str(codigo_snapshot)] = task
+
+    logger.info(
+        "Snapshot indexado: %d tasks por task_id, %d por código.",
+        len(idx_by_id), len(idx_by_codigo),
+    )
+    return idx_by_id, idx_by_codigo
+
+
+def _buscar_task(ativ_id: str, codigo: str, idx_by_id: dict, idx_by_codigo: dict):
+    """
+    Busca a task enriquecida com duplo índice:
+      1. task_id (ClickUp ID) via idx_by_id
+      2. codigo da atividade via idx_by_codigo
+    """
+    return (
+        idx_by_id.get(ativ_id)
+        or idx_by_codigo.get(codigo)
+    )
 
 
 def executar(
@@ -124,23 +198,16 @@ def executar(
     with open(relatorio_progresso_path, "r", encoding="utf-8") as f:
         relatorio = json.load(f)
 
-    # ── 3. Carrega snapshot enriquecido do ClickUp ──────────────────────
+    # ── 3. Carrega e indexa snapshot enriquecido do ClickUp ─────────────
     logger.info("Carregando snapshot ClickUp enriquecido: %s", clickup_snapshot_path)
     with open(clickup_snapshot_path, "r", encoding="utf-8") as f:
         snapshot_raw = json.load(f)
 
-    from app.domain.clickup.models import ClickUpTaskEnriched
-    tasks_index: dict[str, ClickUpTaskEnriched] = {}
-
-    raw_list = snapshot_raw if isinstance(snapshot_raw, list) else snapshot_raw.get("tasks", [])
-    for item in raw_list:
-        try:
-            task = ClickUpTaskEnriched(**item)
-            tasks_index[task.task_id] = task
-        except Exception as e:
-            logger.debug("Ignorando task malformada no snapshot: %s", e)
-
-    logger.info("Snapshot ClickUp: %d tasks indexadas.", len(tasks_index))
+    idx_by_id, idx_by_codigo = _build_snapshot_indexes(snapshot_raw)
+    logger.info(
+        "Snapshot ClickUp: %d tasks no índice por task_id.",
+        len(idx_by_id),
+    )
 
     # ── 4. Monta contextos das atividades ──────────────────────────────
     from app.domain.context.builders import montar_contexto
@@ -148,17 +215,39 @@ def executar(
 
     contextos = []
     codigos_encontrados: list[str] = []
+    codigos_sem_task:    list[str] = []
 
     for atividade in _iter_atividades(relatorio):
         codigo  = _get_codigo(atividade)
         ativ_id = _get_ativ_id(atividade)
-        titulo  = _get_titulo(atividade, codigo)
 
         if atividades_filtro and codigo not in atividades_filtro:
             continue
 
         codigos_encontrados.append(codigo)
-        task = tasks_index.get(ativ_id)
+
+        # Busca com duplo índice: task_id primeiro, código como fallback
+        task = _buscar_task(
+            ativ_id=ativ_id,
+            codigo=codigo,
+            idx_by_id=idx_by_id,
+            idx_by_codigo=idx_by_codigo,
+        )
+
+        if task is None:
+            codigos_sem_task.append(codigo)
+            logger.warning(
+                "Atividade %s (task_id=%r): não encontrada no snapshot enriquecido. "
+                "Contexto será montado sem dados do ClickUp.",
+                codigo, ativ_id or "—",
+            )
+
+        # Título: usa base.name do ClickUp quando task encontrada
+        # Isso garante que o título exibido no relatório é o título original do ClickUp
+        if task is not None:
+            titulo = task.base.name
+        else:
+            titulo = _get_titulo_canonical(atividade, codigo)
 
         prog_raw = _get_progresso(atividade)
         progresso: Optional[ProgressoAtividadeCanonico] = None
@@ -178,6 +267,11 @@ def executar(
         contextos.append(ctx)
 
     logger.info("%d contextos de atividade montados.", len(contextos))
+    if codigos_sem_task:
+        logger.warning(
+            "%d atividade(s) sem task no snapshot (sem contexto ClickUp): %s",
+            len(codigos_sem_task), codigos_sem_task,
+        )
     if codigos_encontrados:
         logger.info("Códigos processados: %s", codigos_encontrados)
 
