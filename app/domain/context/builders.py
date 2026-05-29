@@ -26,13 +26,14 @@ class ContextoAtividade:
     origem_datas:  str
     progresso:     Optional[ProgressoAtividadeCanonico]
     descricao:     str
-    comentarios:   list[str] = field(default_factory=list)
-    checklists:    list[dict] = field(default_factory=list)
-    responsaveis:  list[str] = field(default_factory=list)
-    anexos:        list     = field(default_factory=list)  # lista de dicts ou strings com titulo do anexo
-    status:        str = "pendente"
+    comentarios:   list[str]      = field(default_factory=list)
+    checklists:    list[dict]     = field(default_factory=list)
+    responsaveis:  list[str]      = field(default_factory=list)
+    anexos:        list           = field(default_factory=list)
+    customfields:  list[dict]     = field(default_factory=list)  # itens de ação e campos extras
+    status:        str            = "pendente"
     fontes:        list[FonteDado] = field(default_factory=list)
-    task_id:       Optional[str] = None
+    task_id:       Optional[str]  = None
 
     def tem_dados_suficientes(self) -> bool:
         return bool(self.titulo and self.data_inicio and self.data_fim)
@@ -79,6 +80,27 @@ def _extrair_anexos(task: ClickUpTaskEnriched) -> list:
     return resultado
 
 
+def _extrair_customfields(task: ClickUpTaskEnriched) -> list[dict]:
+    """
+    Extrai customfields da task enriquecida.
+    Prioriza task.customfields (enriquecido) sobre task.base.customfields.
+    Filtra campos sem valor para não poluir o contexto.
+    """
+    raw = task.customfields or task.base.customfields or []
+    resultado = []
+    for cf in raw:
+        if not isinstance(cf, dict):
+            continue
+        valor = (
+            cf.get("value")
+            or cf.get("value_richtext")
+            or ""
+        )
+        if str(valor).strip():
+            resultado.append(cf)
+    return resultado
+
+
 def _fonte(campo: str, origem: str, valor: str) -> FonteDado:
     return FonteDado(campo=campo, origem=origem, valor=valor)
 
@@ -119,13 +141,14 @@ def montar_contexto(
         fontes.append(_fonte("data_inicio", "ausente", ""))
         fontes.append(_fonte("data_fim",    "ausente", ""))
 
-    descricao    = ""
-    comentarios: list[str] = []
-    checklists:  list[dict] = []
-    responsaveis: list[str] = []
-    anexos:       list      = []
-    status       = "pendente"
-    task_id      = None
+    descricao     = ""
+    comentarios:  list[str]  = []
+    checklists:   list[dict] = []
+    responsaveis: list[str]  = []
+    anexos:       list       = []
+    customfields: list[dict] = []
+    status  = "pendente"
+    task_id = None
 
     if task:
         descricao    = (task.description or task.textcontent or "").strip()
@@ -133,6 +156,7 @@ def montar_contexto(
         checklists   = task.checklists or []
         responsaveis = _extrair_responsaveis(task)
         anexos       = _extrair_anexos(task)
+        customfields = _extrair_customfields(task)
         status       = task.base.status
         task_id      = task.task_id
         fontes.append(_fonte("descricao",    "clickup", descricao[:80]))
@@ -140,6 +164,8 @@ def montar_contexto(
         fontes.append(_fonte("responsaveis", "clickup", ", ".join(responsaveis)))
         if anexos:
             fontes.append(_fonte("anexos", "clickup", f"{len(anexos)} anexo(s)"))
+        if customfields:
+            fontes.append(_fonte("customfields", "clickup", f"{len(customfields)} campo(s) com valor"))
 
     return ContextoAtividade(
         codigo=codigo,
@@ -154,6 +180,7 @@ def montar_contexto(
         checklists=checklists,
         responsaveis=responsaveis,
         anexos=anexos,
+        customfields=customfields,
         status=status,
         fontes=fontes,
         task_id=task_id,
