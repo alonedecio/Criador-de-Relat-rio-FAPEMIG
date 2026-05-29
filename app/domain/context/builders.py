@@ -29,6 +29,7 @@ class ContextoAtividade:
     comentarios:   list[str] = field(default_factory=list)
     checklists:    list[dict] = field(default_factory=list)
     responsaveis:  list[str] = field(default_factory=list)
+    anexos:        list     = field(default_factory=list)  # lista de dicts ou strings com titulo do anexo
     status:        str = "pendente"
     fontes:        list[FonteDado] = field(default_factory=list)
     task_id:       Optional[str] = None
@@ -60,6 +61,22 @@ def _extrair_comentarios(task: ClickUpTaskEnriched) -> list[str]:
         if texto.strip():
             textos.append(texto.strip())
     return textos
+
+
+def _extrair_anexos(task: ClickUpTaskEnriched) -> list:
+    """
+    Extrai anexos da task do ClickUp.
+    A API retorna uma lista de dicts com campos como 'title', 'filename', 'url'.
+    Preservamos o dict completo para o prompt usar o titulo como evidencia inferivel.
+    """
+    raw = getattr(task, "attachments", None) or []
+    resultado = []
+    for a in raw:
+        if isinstance(a, dict):
+            resultado.append(a)
+        elif isinstance(a, str) and a.strip():
+            resultado.append({"title": a})
+    return resultado
 
 
 def _fonte(campo: str, origem: str, valor: str) -> FonteDado:
@@ -106,6 +123,7 @@ def montar_contexto(
     comentarios: list[str] = []
     checklists:  list[dict] = []
     responsaveis: list[str] = []
+    anexos:       list      = []
     status       = "pendente"
     task_id      = None
 
@@ -114,11 +132,14 @@ def montar_contexto(
         comentarios  = _extrair_comentarios(task)
         checklists   = task.checklists or []
         responsaveis = _extrair_responsaveis(task)
+        anexos       = _extrair_anexos(task)
         status       = task.base.status
         task_id      = task.task_id
         fontes.append(_fonte("descricao",    "clickup", descricao[:80]))
         fontes.append(_fonte("status",       "clickup", status))
         fontes.append(_fonte("responsaveis", "clickup", ", ".join(responsaveis)))
+        if anexos:
+            fontes.append(_fonte("anexos", "clickup", f"{len(anexos)} anexo(s)"))
 
     return ContextoAtividade(
         codigo=codigo,
@@ -132,6 +153,7 @@ def montar_contexto(
         comentarios=comentarios,
         checklists=checklists,
         responsaveis=responsaveis,
+        anexos=anexos,
         status=status,
         fontes=fontes,
         task_id=task_id,
