@@ -42,6 +42,19 @@ Campos de secoes_finais (alinhados a TextosSecaoFinal v2):
   comentario_final        → Tópico 9
   resumo                  → Tópico 10a
   palavras_chave          → Tópico 10b (lista)
+
+Estrutura de colunas da Seção 3 (11 colunas):
+  1  Item
+  2  Meta / Atividade
+  3  Indicador Físico
+  4  Duração prevista — Mês/Ano início
+  5  Duração prevista — Mês/Ano fim
+  6  Duração efetiva  — Mês/Ano início
+  7  Duração efetiva  — Mês/Ano fim
+  8  Executado no período — Prev. (%)
+  9  Executado no período — Real. (%)
+  10 Acumulado — Prev. (%)
+  11 Acumulado — Real. (%)
 """
 from __future__ import annotations
 
@@ -596,6 +609,15 @@ table.resumo .date-cell { text-align: center; font-size: .72rem; white-space: no
 
 # ───────────────────────────────────────────────────────────────────────────────────
 # Seção 3 — Tabela resumo do cronograma físico
+#
+# Estrutura de colunas (11 ao total):
+#   Col 1  : Item          (rowspan=2)
+#   Col 2  : Meta/Ativ.    (rowspan=2)
+#   Col 3  : Indicador     (rowspan=2)
+#   Col 4-5: Duração prevista (colspan=2) → Mês/Ano início | Mês/Ano fim
+#   Col 6-7: Duração efetiva  (colspan=2) → Mês/Ano início | Mês/Ano fim
+#   Col 8-9: Executado no período (colspan=2) → Prev.(%) | Real.(%)
+#   Col 10-11: Acumulado   (colspan=2) → Prev.(%) | Real.(%)
 # ───────────────────────────────────────────────────────────────────────────────────
 
 def _render_secao3(metas: list[dict]) -> str:
@@ -605,18 +627,19 @@ def _render_secao3(metas: list[dict]) -> str:
         titulo_meta = _get_titulo_meta(meta)
         realizado_meta, previsto_meta = _get_progresso_meta(meta)
 
-        # Linha de meta: abrange todas as colunas de datas com "—" (não aplicável à meta)
+        # Linha de meta: cols 1-3 fundidas (Item + Meta/Ativ + Indicador),
+        # datas com "—" e percentuais da meta repetidos em período e acumulado.
         rows.append(
             f'<tr class="meta-row">'
             f'<td colspan="3"><strong>Meta {num_meta}</strong> — {titulo_meta}</td>'
-            f'<td class="date-cell">—</td>'
-            f'<td class="date-cell">—</td>'
-            f'<td class="date-cell">—</td>'
-            f'<td class="date-cell">—</td>'
-            f'<td class="num">{_pct(previsto_meta)}</td>'
-            f'<td class="num">{_pct(realizado_meta)}</td>'
-            f'<td class="num">{_pct(previsto_meta)}</td>'
-            f'<td class="num">{_pct(realizado_meta)}</td>'
+            f'<td class="date-cell">—</td>'  # prev_ini
+            f'<td class="date-cell">—</td>'  # prev_fim
+            f'<td class="date-cell">—</td>'  # real_ini
+            f'<td class="date-cell">—</td>'  # real_fim
+            f'<td class="num">{_pct(previsto_meta)}</td>'   # executado período prev
+            f'<td class="num">{_pct(realizado_meta)}</td>'  # executado período real
+            f'<td class="num">{_pct(previsto_meta)}</td>'   # acumulado prev
+            f'<td class="num">{_pct(realizado_meta)}</td>'  # acumulado real
             f'</tr>'
         )
         for atv in meta.get("atividades", []):
@@ -636,10 +659,10 @@ def _render_secao3(metas: list[dict]) -> str:
                 f'<td class="date-cell">{prev_fim}</td>'
                 f'<td class="date-cell">{real_ini}</td>'
                 f'<td class="date-cell">{real_fim}</td>'
-                f'<td class="num">{prev_atv}</td>'
-                f'<td class="num">{real_atv}</td>'
-                f'<td class="num">{prev_atv}</td>'
-                f'<td class="num">{real_atv}</td>'
+                f'<td class="num">{prev_atv}</td>'   # executado período prev
+                f'<td class="num">{real_atv}</td>'   # executado período real
+                f'<td class="num">{prev_atv}</td>'   # acumulado prev
+                f'<td class="num">{real_atv}</td>'   # acumulado real
                 f'</tr>'
             )
 
