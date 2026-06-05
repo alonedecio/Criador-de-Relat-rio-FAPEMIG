@@ -32,6 +32,7 @@ class ContextoAtividade:
     anexos:        list           = field(default_factory=list)
     customfields:  list[dict]     = field(default_factory=list)
     status:        str            = "pendente"
+    status_normalizado: bool      = False
     fontes:        list[FonteDado] = field(default_factory=list)
     task_id:       Optional[str]  = None
 
@@ -119,6 +120,39 @@ def _fonte(campo: str, origem: str, valor: str) -> FonteDado:
     return FonteDado(campo=campo, origem=origem, valor=valor)
 
 
+def _normalizar_status(
+    status: str,
+    progresso: Optional[ProgressoAtividadeCanonico],
+) -> tuple[str, bool]:
+    """
+    Normaliza o status da task quando o label do ClickUp contradiz o progresso real.
+
+    Isso acontece quando a task-pai nao foi atualizada manualmente apos
+    a conclusao ou avanço das subtarefas. A normalizacao garante que o
+    writer receba um contexto coerente.
+
+    Regras:
+      realizado >= 95% e status != concluido -> normaliza para 'concluido'
+      realizado >= 50% e status == pendente  -> normaliza para 'em progresso'
+
+    Retorna (status_final, foi_normalizado).
+    """
+    if progresso is None:
+        return status, False
+
+    realizado = progresso.realizado_percentual or 0.0
+    status_lower = status.lower().strip()
+    ja_concluido = status_lower in ("concluido", "concluído", "complete", "closed", "done")
+
+    if realizado >= 95.0 and not ja_concluido:
+        return "concluido", True
+
+    if realizado >= 50.0 and status_lower == "pendente":
+        return "em progresso", True
+
+    return status, False
+
+
 def montar_contexto(
     codigo:    str,
     titulo:    str,
@@ -133,7 +167,7 @@ def montar_contexto(
     data_fim:    Optional[date] = None
     origem_datas = "ausente"
 
-    # ── Prioridade 1: datas do ClickUp (campo planejado) ─────────────────
+    # ── Prioridade 1: datas do ClickUp (campo planejado) ─────────────────────
     if task:
         data_inicio = _ms_to_date(task.data_planejada_inicio_ms)
         data_fim    = _ms_to_date(task.data_planejada_fim_ms)
@@ -153,7 +187,7 @@ def montar_contexto(
             origem_datas = "pdf"
             fontes.append(_fonte("data_fim", "pdf", str(data_fim)))
 
-    # ── Prioridade 3: datas do ProgressoAtividadeCanonico (JSON canônico) ─
+    # ── Prioridade 3: datas do ProgressoAtividadeCanonico (JSON canônico) ──
     if progresso and not (data_inicio and data_fim):
         d_ini = _parse_date(getattr(progresso, "data_inicio", None))
         d_fim = _parse_date(getattr(progresso, "data_fim", None))
@@ -178,6 +212,7 @@ def montar_contexto(
     anexos:       list       = []
     customfields: list[dict] = []
     status  = "pendente"
+    status_normalizado = False
     task_id = None
 
     if task:
@@ -197,6 +232,15 @@ def montar_contexto(
         if customfields:
             fontes.append(_fonte("customfields", "clickup", f"{len(customfields)} campo(s) com valor"))
 
+    # ── Normaliza status quando contradiz o progresso real ─────────────────
+    status, status_normalizado = _normalizar_status(status, progresso)
+    if status_normalizado:
+        fontes.append(_fonte(
+            "status",
+            "normalizacao",
+            f"status corrigido automaticamente para '{status}' pois realizado={progresso.realizado_percentual}% e label ClickUp estava desatualizado",
+        ))
+
     return ContextoAtividade(
         codigo=codigo,
         meta_codigo=meta_codigo,
@@ -212,6 +256,7 @@ def montar_contexto(
         anexos=anexos,
         customfields=customfields,
         status=status,
+        status_normalizado=status_normalizado,
         fontes=fontes,
         task_id=task_id,
     )
