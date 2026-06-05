@@ -21,7 +21,11 @@ Mapeamento real do JSON canônico (relatorio_final_completo.json):
   atividade.titulo / titulo_original  → título da atividade
   atividade.indicador_fisico          → indicador físico
   atividade.percentual_realizado      → % realizado (float direto)
-  atividade.progresso                 → dict com previsto_percentual, realizado_percentual, situacao_prazo, atrasada
+  atividade.progresso                 → dict com previsto_percentual, realizado_percentual,
+                                        situacao_prazo, atrasada,
+                                        mes_ano_inicio_previsto, mes_ano_fim_previsto,
+                                        mes_ano_inicio_real, mes_ano_fim_real
+  atividade.datas                     → dict com data_inicio, data_fim (fallback ISO)
   atividade.desenvolvimento           → texto gerado pela IA (só no JSON com textos)
   atividade.resultados                → texto gerado pela IA
   atividade.justificativa             → texto gerado pela IA
@@ -63,6 +67,34 @@ def _safe(value: Any, fallback: str = "—") -> str:
     if value is None or str(value).strip() == "":
         return fallback
     return str(value).strip()
+
+
+def _mes_ano(valor: Any) -> str:
+    """
+    Converte data para formato MM/AAAA.
+
+    Aceita:
+      - string já no formato 'MM/AAAA'  → retorna direto
+      - string ISO 'YYYY-MM-DD'         → converte para MM/AAAA
+      - string 'YYYY-MM'                → converte para MM/AAAA
+      - None / vazio                    → retorna '—'
+    """
+    if not valor:
+        return "—"
+    s = str(valor).strip()
+    if not s:
+        return "—"
+    # Já no formato MM/AAAA
+    if len(s) == 7 and s[2] == "/":
+        return s
+    # ISO YYYY-MM-DD ou YYYY-MM
+    try:
+        parts = s[:10].split("-")
+        if len(parts) >= 2:
+            return f"{parts[1]}/{parts[0]}"
+    except Exception:
+        pass
+    return s
 
 
 def _get_texto(atv: dict, campo: str) -> str:
@@ -114,6 +146,26 @@ def _get_progresso_atv(atv: dict) -> dict:
         p = dict(p)
         p["realizado_percentual"] = atv["percentual_realizado"]
     return p
+
+
+def _get_datas_atv(atv: dict) -> tuple[str, str, str, str]:
+    """
+    Retorna (prev_ini, prev_fim, real_ini, real_fim) em formato MM/AAAA.
+
+    Prioridade:
+      1. atividade.progresso.mes_ano_inicio_previsto / mes_ano_fim_previsto /
+                             mes_ano_inicio_real     / mes_ano_fim_real
+      2. atividade.datas.data_inicio / data_fim  (ISO → MM/AAAA)
+    """
+    p = atv.get("progresso") or {}
+    datas = atv.get("datas") or {}
+
+    prev_ini = _mes_ano(p.get("mes_ano_inicio_previsto") or datas.get("data_inicio"))
+    prev_fim = _mes_ano(p.get("mes_ano_fim_previsto")    or datas.get("data_fim"))
+    real_ini = _mes_ano(p.get("mes_ano_inicio_real"))
+    real_fim = _mes_ano(p.get("mes_ano_fim_real"))
+
+    return prev_ini, prev_fim, real_ini, real_fim
 
 
 def _status_badge(situacao: str | None, atrasada: bool | None, status_clickup: str | None = None) -> str:
@@ -197,7 +249,7 @@ body {
   line-height: 1.55;
   padding: 28px 16px 60px;
 }
-.page-wrap { max-width: 1080px; margin: 0 auto; }
+.page-wrap { max-width: 1120px; margin: 0 auto; }
 
 /* ── Cabeçalho ─────────────────────────────────────────── */
 .report-header {
@@ -303,19 +355,20 @@ body {
 table.resumo {
   width: 100%;
   border-collapse: collapse;
-  font-size: .78rem;
+  font-size: .75rem;
 }
 table.resumo th {
   background: var(--primary);
   color: #fff;
-  padding: 8px 10px;
-  text-align: left;
+  padding: 7px 8px;
+  text-align: center;
   font-weight: 600;
   white-space: nowrap;
   border-right: 1px solid rgba(255,255,255,.15);
 }
+table.resumo th.left { text-align: left; }
 table.resumo td {
-  padding: 7px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid #eeece9;
   vertical-align: middle;
   border-right: 1px solid #f0ede9;
@@ -325,11 +378,12 @@ table.resumo tr:hover td { background: #f2f8f7; }
 table.resumo tr.meta-row td {
   background: var(--primary-light);
   font-weight: 700;
-  font-size: .82rem;
+  font-size: .78rem;
   color: var(--primary-dark);
   border-top: 2px solid #b8d4d2;
 }
-table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
+table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.resumo .date-cell { text-align: center; font-size: .72rem; white-space: nowrap; color: var(--muted); }
 
 /* ── Meta block ───────────────────────────────────────────── */
 .meta-block {
@@ -551,9 +605,14 @@ def _render_secao3(metas: list[dict]) -> str:
         titulo_meta = _get_titulo_meta(meta)
         realizado_meta, previsto_meta = _get_progresso_meta(meta)
 
+        # Linha de meta: abrange todas as colunas de datas com "—" (não aplicável à meta)
         rows.append(
             f'<tr class="meta-row">'
             f'<td colspan="3"><strong>Meta {num_meta}</strong> — {titulo_meta}</td>'
+            f'<td class="date-cell">—</td>'
+            f'<td class="date-cell">—</td>'
+            f'<td class="date-cell">—</td>'
+            f'<td class="date-cell">—</td>'
             f'<td class="num">{_pct(previsto_meta)}</td>'
             f'<td class="num">{_pct(realizado_meta)}</td>'
             f'<td class="num">{_pct(previsto_meta)}</td>'
@@ -565,13 +624,18 @@ def _render_secao3(metas: list[dict]) -> str:
             titulo_atv = _safe(atv.get("titulo") or atv.get("titulo_original"), "—")
             indicador = _safe(atv.get("indicador_fisico"), "—")
             p = _get_progresso_atv(atv)
+            prev_ini, prev_fim, real_ini, real_fim = _get_datas_atv(atv)
             prev_atv = _pct(p.get("previsto_percentual"))
             real_atv = _pct(p.get("realizado_percentual") or atv.get("percentual_realizado"))
             rows.append(
                 f'<tr>'
                 f'<td class="num" style="color:var(--muted)">{codigo}</td>'
                 f'<td>{titulo_atv}</td>'
-                f'<td style="color:var(--muted);font-size:.73rem;line-height:1.4">{indicador}</td>'
+                f'<td style="color:var(--muted);font-size:.72rem;line-height:1.4">{indicador}</td>'
+                f'<td class="date-cell">{prev_ini}</td>'
+                f'<td class="date-cell">{prev_fim}</td>'
+                f'<td class="date-cell">{real_ini}</td>'
+                f'<td class="date-cell">{real_fim}</td>'
                 f'<td class="num">{prev_atv}</td>'
                 f'<td class="num">{real_atv}</td>'
                 f'<td class="num">{prev_atv}</td>'
@@ -595,14 +659,19 @@ def _render_secao3(metas: list[dict]) -> str:
     <table class="resumo">
       <thead>
         <tr>
-          <th style="width:48px">Item</th>
-          <th>Meta / Atividade</th>
-          <th>Indicador Físico</th>
-          <th colspan="2" style="text-align:center;background:#015f65">Executado no período</th>
-          <th colspan="2" style="text-align:center;background:#024a50">Acumulado</th>
+          <th class="left" rowspan="2" style="width:42px">Item</th>
+          <th class="left" rowspan="2">Meta / Atividade</th>
+          <th class="left" rowspan="2">Indicador Físico</th>
+          <th colspan="2" style="background:#015f65">Duração prevista</th>
+          <th colspan="2" style="background:#024a50">Duração efetiva</th>
+          <th colspan="2" style="background:#015f65">Executado no período</th>
+          <th colspan="2" style="background:#024a50">Acumulado</th>
         </tr>
-        <tr style="background:#024a50;font-size:.72rem">
-          <th></th><th></th><th></th>
+        <tr style="background:#013e44;font-size:.70rem">
+          <th>Mês/Ano<br>início</th>
+          <th>Mês/Ano<br>fim</th>
+          <th>Mês/Ano<br>início</th>
+          <th>Mês/Ano<br>fim</th>
           <th class="num">Prev. (%)</th>
           <th class="num">Real. (%)</th>
           <th class="num">Prev. (%)</th>
