@@ -55,9 +55,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("teste_gerar_textos")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # CONFIGURAÇÃO DE CAMINHOS — estrutura real do projeto
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 DATA_INPUT  = ROOT / "data" / "input"
 DATA_OUTPUT = ROOT / "data" / "output"
@@ -67,7 +67,7 @@ RELATORIO_PROGRESSO = DATA_INPUT  / "relatorio_com_progresso_clickup_api.json"
 CLICKUP_SNAPSHOT    = DATA_INPUT  / "clickup_enriched_snapshot.json"
 OUTPUT_TESTE        = DATA_OUTPUT / "teste_textos_parcial.json"
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
 def _separador(titulo: str = "", char: str = "━", largura: int = 70) -> str:
@@ -233,8 +233,7 @@ def main() -> None:
     print(f"  Termo de Outorga: {termo_path.name}")
     print(_separador())
 
-    # ── Pré-visualização dos contextos (antes de chamar a LLM)
-    print("\n▶ Montando contextos das atividades...")
+    # ── Importa funções do use case (fonte única de verdade)
     from app.application.use_cases.gerar_textos_atividades import (
         _iter_atividades,
         _get_codigo,
@@ -247,6 +246,9 @@ def main() -> None:
     from app.domain.context.builders import montar_contexto
     from app.domain.reporting.canonical_schemas import ProgressoAtividadeCanonico
 
+    # ── Pré-visualização dos contextos (antes de chamar a LLM)
+    print("\n▶ Montando contextos das atividades...")
+
     with open(relatorio_path, "r", encoding="utf-8") as f:
         relatorio = json.load(f)
     with open(snapshot_path, "r", encoding="utf-8") as f:
@@ -254,6 +256,16 @@ def main() -> None:
 
     idx_by_id, idx_by_codigo = _build_snapshot_indexes(snapshot_raw)
     print(f"  Snapshot: {len(idx_by_id)} tasks indexadas por task_id, {len(idx_by_codigo)} por código.")
+
+    # Diagnóstico: quantas atividades existem no JSON antes do filtro
+    todos_codigos = sorted({_get_codigo(a) for a in _iter_atividades(relatorio) if _get_codigo(a)})
+    print(f"  Relatório: {len(todos_codigos)} atividades encontradas no JSON (chaves raiz: {list(relatorio.keys())})")
+
+    if filtro:
+        ausentes = [c for c in filtro if c not in todos_codigos]
+        if ausentes:
+            print(f"  ⚠️  Códigos solicitados não encontrados no JSON: {ausentes}")
+            print(f"     Códigos disponíveis: {todos_codigos}")
 
     contextos_preview = []
     for atividade in _iter_atividades(relatorio):
@@ -284,7 +296,6 @@ def main() -> None:
         _exibir_contexto(ctx)
 
     if not contextos_preview:
-        todos_codigos = sorted({_get_codigo(a) for a in _iter_atividades(relatorio)})
         print(f"\n⚠️  Nenhuma atividade encontrada com filtro {filtro}.")
         print(f"   Códigos disponíveis no relatório: {todos_codigos}")
         sys.exit(0)
@@ -311,38 +322,50 @@ def main() -> None:
 
     # ── Exibe resultados
     print("\n" + _separador("RESULTADOS GERADOS"))
-    for meta in resultado_final.get("metas", []):
-        for atv in meta.get("atividades", []):
-            codigo = (
-                atv.get("numero_atividade_original")
-                or atv.get("numero_atividade")
-                or atv.get("codigo", "?")
-            )
-            if filtro and codigo not in filtro:
-                continue
-            if not atv.get("desenvolvimento"):
-                continue
 
-            from app.domain.ai.schemas import ResultadoAtividade, AuditoriaAtividade, TextosGerados, StatusValidacao
-            aud_raw = atv.get("_auditoria", {})
-            resultado_mock = ResultadoAtividade(
+    # Suporte a ambas as estruturas de saída do relatorio_final
+    def _iter_atividades_resultado(rel: dict):
+        for meta in rel.get("metas", []):
+            yield from meta.get("atividades", [])
+        relatorio_inner = rel.get("relatorio", {})
+        secoes = relatorio_inner.get("secoes_fixas", {})
+        tabela = secoes.get("3_tabela_resumo_execucao_cronograma_fisico", {})
+        for meta in tabela.get("itens_meta_atividade", []):
+            yield from meta.get("atividades", [])
+        for item in rel.get("itens", []):
+            yield from item.get("atividades", [])
+
+    for atv in _iter_atividades_resultado(resultado_final):
+        codigo = (
+            atv.get("numero_atividade_original")
+            or atv.get("numero_atividade")
+            or atv.get("codigo", "?")
+        )
+        if filtro and codigo not in filtro:
+            continue
+        if not atv.get("desenvolvimento"):
+            continue
+
+        from app.domain.ai.schemas import ResultadoAtividade, AuditoriaAtividade, TextosGerados, StatusValidacao
+        aud_raw = atv.get("_auditoria", {})
+        resultado_mock = ResultadoAtividade(
+            atividade_id=codigo,
+            meta_codigo=codigo.split(".")[0] if "." in codigo else codigo,
+            titulo=atv.get("titulo", ""),
+            textos=TextosGerados(
+                desenvolvimento=atv.get("desenvolvimento", ""),
+                resultados=atv.get("resultados", ""),
+                justificativa=atv.get("justificativa", ""),
+            ),
+            auditoria=AuditoriaAtividade(
                 atividade_id=codigo,
-                meta_codigo=codigo.split(".")[0] if "." in codigo else codigo,
-                titulo=atv.get("titulo", ""),
-                textos=TextosGerados(
-                    desenvolvimento=atv.get("desenvolvimento", ""),
-                    resultados=atv.get("resultados", ""),
-                    justificativa=atv.get("justificativa", ""),
-                ),
-                auditoria=AuditoriaAtividade(
-                    atividade_id=codigo,
-                    tentativas=aud_raw.get("tentativas", 1),
-                    status_final=StatusValidacao(aud_raw.get("status_validacao", "aprovado")),
-                    erros_encontrados=aud_raw.get("erros", []),
-                    fontes_contexto=aud_raw.get("fontes_contexto", []),
-                ),
-            )
-            _exibir_resultado(resultado_mock)
+                tentativas=aud_raw.get("tentativas", 1),
+                status_final=StatusValidacao(aud_raw.get("status_validacao", "aprovado")),
+                erros_encontrados=aud_raw.get("erros", []),
+                fontes_contexto=aud_raw.get("fontes_contexto", []),
+            ),
+        )
+        _exibir_resultado(resultado_mock)
 
     print(_separador())
     print(f"\n✅ Resultado parcial salvo em: {output_path}")
