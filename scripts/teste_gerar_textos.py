@@ -18,7 +18,7 @@ Pré-requisitos:
     - GEMINI_API_KEY no ambiente (ou .env na raiz do projeto)
     - Arquivos esperados (defaults):
         data/input/termo_projeto.pdf
-        data/output/relatorio_final_completo.json
+        data/output/relatorio_final_com_progresso.json
         data/input/clickup_enriched_snapshot.json
 
 O script exibe:
@@ -55,19 +55,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger("teste_gerar_textos")
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # CONFIGURAÇÃO DE CAMINHOS — estrutura real do projeto
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 DATA_INPUT  = ROOT / "data" / "input"
 DATA_OUTPUT = ROOT / "data" / "output"
 
 TERMO_PDF           = DATA_INPUT  / "termo_projeto.pdf"
-RELATORIO_PROGRESSO = DATA_OUTPUT / "relatorio_final_completo.json"
+RELATORIO_PROGRESSO = DATA_OUTPUT / "relatorio_final_com_progresso.json"
 CLICKUP_SNAPSHOT    = DATA_INPUT  / "clickup_enriched_snapshot.json"
 OUTPUT_TESTE        = DATA_OUTPUT / "teste_textos_parcial.json"
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
 def _separador(titulo: str = "", char: str = "━", largura: int = 70) -> str:
