@@ -128,18 +128,26 @@ def _atividade_sort_key(atividade: dict):
     return (9999, 9999)
 
 
+def _get_base_fields(task: dict) -> dict:
+    """Extrai os campos base de uma task, suportando tanto o formato raw
+    quanto o formato enriched (onde os campos ficam dentro de task['base'])."""
+    base = task.get("base")
+    if isinstance(base, dict):
+        return base
+    return task
+
+
 def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
     tasks = payload.get("tasks", []) or []
 
-    metas_por_id = {}
-    atividades_por_meta_id = defaultdict(list)
+    metas_por_id: dict[str, dict] = {}
+    atividades_por_meta_id: dict[str, list] = defaultdict(list)
 
+    # --- Primeira passagem: identificar Metas pelo nome (independente de parent) ---
     for task in tasks:
-        nome = _extract_task_name(task)
+        base = _get_base_fields(task)
+        nome = _extract_task_name(base)
         if not nome:
-            continue
-
-        if _extract_parent_id(task):
             continue
 
         m = PADRAO_META.match(nome)
@@ -147,9 +155,12 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
             continue
 
         numero_meta = int(m.group(1))
-        meta_id = _extract_task_id(task)
+        meta_id = _extract_task_id(base)
 
         if not meta_id:
+            continue
+
+        if _normalize_str(nome).startswith("Meta 0"):
             continue
 
         metas_por_id[meta_id] = {
@@ -164,17 +175,19 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
             },
         }
 
+    # --- Segunda passagem: identificar Atividades cujo parent é uma Meta conhecida ---
     for task in tasks:
-        parent_id = _extract_parent_id(task)
+        base = _get_base_fields(task)
+        parent_id = _extract_parent_id(base)
         if not parent_id or parent_id not in metas_por_id:
             continue
 
-        task_id = _extract_task_id(task)
+        task_id = _extract_task_id(base)
         if not task_id:
             continue
 
-        nome = _extract_task_name(task)
-        custom_fields = _extract_custom_fields(task)
+        nome = _extract_task_name(base)
+        custom_fields = _extract_custom_fields(base)
 
         (
             numero_atividade,
@@ -190,9 +203,9 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
             "titulo_original": titulo_original,
             "titulo": titulo,
             "indicador_fisico": custom_fields.get("indicador_fisico"),
-            "status_clickup": _extract_status(task),
+            "status_clickup": _extract_status(base),
             "percentual_realizado": custom_fields.get("percentual_realizado"),
-            "datas": _extract_dates(task),
+            "datas": _extract_dates(base),
             "progresso": {
                 "atrasada": None,
                 "situacao_prazo": None,
@@ -214,21 +227,19 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
                 "source": "clickup_raw",
                 "task_id": task_id,
                 "parent_id": parent_id,
-                "list_id": (task.get("list") or {}).get("id"),
+                "list_id": (base.get("list") or {}).get("id"),
                 "custom_fields": custom_fields,
             },
         }
 
         atividades_por_meta_id[parent_id].append(atividade)
 
+    # --- Montagem final ordenada ---
     metas_ordenadas = []
     for meta_id, meta in metas_por_id.items():
         atividades = sorted(atividades_por_meta_id.get(meta_id, []), key=_atividade_sort_key)
 
         if not atividades:
-            continue
-
-        if _normalize_str(meta.get("meta_nome")).startswith("Meta 0"):
             continue
 
         meta["atividades"] = atividades
