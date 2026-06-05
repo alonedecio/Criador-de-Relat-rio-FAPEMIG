@@ -9,6 +9,14 @@ Fluxo:
     2. Carrega o Termo de Outorga (PDF) para contexto de projeto
     3. Executa writer_secoes_finais (1 chamada LLM)
     4. Aplica os textos no relatório e salva
+
+Campos gerados (alinhados a TextosSecaoFinal v2 — RAT FAPEMIG):
+    Tópico 5  → avaliacao_gestao
+    Tópico 6  → desdobramentos_internos, posicionamento_mercado, beneficios_sociais
+    Tópico 7  → producao_tecnologica
+    Tópico 8  → parcerias_institucionais
+    Tópico 9  → comentario_final
+    Tópico 10 → resumo, palavras_chave
 """
 from __future__ import annotations
 
@@ -80,16 +88,29 @@ def executar(
     )
 
     # 5. Aplica os textos no relatório
+    #    Campos alinhados a TextosSecaoFinal v2 (RAT FAPEMIG)
     secoes = relatorio.setdefault("secoes_finais", {})
-    secoes["capacitacoes_equipe"]       = textos_finais.capacitacoes_equipe
-    secoes["melhorias_instalacoes"]     = textos_finais.melhorias_instalacoes
-    secoes["dificuldades_nao_tecnicas"] = textos_finais.dificuldades_nao_tecnicas
-    secoes["impactos_internos"]         = textos_finais.impactos_internos
-    secoes["impactos_externos"]         = textos_finais.impactos_externos
-    secoes["producao_tecnologica"]      = textos_finais.producao_tecnologica
-    secoes["parcerias_institucionais"]  = textos_finais.parcerias_institucionais
-    secoes["comentario_final"]          = textos_finais.comentario_final
-    secoes["resumo"]                    = textos_finais.resumo
+
+    # Tópico 5 — Avaliação da gestão (consolidado)
+    secoes["avaliacao_gestao"]       = textos_finais.avaliacao_gestao
+
+    # Tópico 6 — Desdobramentos e impactos (3 sub-campos)
+    secoes["desdobramentos_internos"]  = textos_finais.desdobramentos_internos
+    secoes["posicionamento_mercado"]   = textos_finais.posicionamento_mercado
+    secoes["beneficios_sociais"]       = textos_finais.beneficios_sociais
+
+    # Tópico 7 — Produção tecnológica
+    secoes["producao_tecnologica"]    = textos_finais.producao_tecnologica
+
+    # Tópico 8 — Parcerias institucionais
+    secoes["parcerias_institucionais"] = textos_finais.parcerias_institucionais
+
+    # Tópico 9 — Comentário final
+    secoes["comentario_final"]         = textos_finais.comentario_final
+
+    # Tópico 10 — Resumo e palavras-chave
+    secoes["resumo"]                   = textos_finais.resumo
+    secoes["palavras_chave"]           = textos_finais.palavras_chave
 
     # 6. Salva
     output_path.parent.mkdir(parents=True, exist_ok=True)

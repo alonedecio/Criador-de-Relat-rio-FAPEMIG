@@ -24,6 +24,8 @@ Indexação do snapshot:
       - idx_by_id:     task_id (ClickUp ID) → ClickUpTaskEnriched
       - idx_by_codigo: código da atividade (ex: '2.1') → ClickUpTaskEnriched
                        Resolve o campo 'codigo' do snapshot se disponível.
+    Fallback adicional:
+      - busca por similaridade de nome quando task_id e código falham.
 
 Estruturas de JSON suportadas em _iter_atividades:
     1. Canônica (Pydantic snake_case):
@@ -237,6 +239,20 @@ def _buscar_task(ativ_id: str, codigo: str, idx_by_id: dict, idx_by_codigo: dict
     )
 
 
+def _buscar_task_por_nome(titulo: str, idx_by_id: dict):
+    """
+    Fallback: busca por similaridade de nome quando task_id e código falham.
+    Compara strip().lower() para ser tolerante a espaços e capitalização.
+    """
+    if not titulo:
+        return None
+    titulo_norm = titulo.strip().lower()
+    for task in idx_by_id.values():
+        if task.base.name.strip().lower() == titulo_norm:
+            return task
+    return None
+
+
 def _make_pdf_atv_sintetico(codigo: str, data_inicio: Optional[date], data_fim: Optional[date]):
     """
     Cria um AtividadePDF sintético contendo apenas as datas do JSON canônico.
@@ -322,8 +338,8 @@ def executar(
 
     idx_by_id, idx_by_codigo = _build_snapshot_indexes(snapshot_raw)
     logger.info(
-        "Snapshot ClickUp: %d tasks no índice por task_id.",
-        len(idx_by_id),
+        "Snapshot ClickUp: %d tasks no índice por task_id, %d por código.",
+        len(idx_by_id), len(idx_by_codigo),
     )
 
     # ── 4. Monta contextos das atividades ──────────────────────────
@@ -350,6 +366,16 @@ def executar(
             idx_by_codigo=idx_by_codigo,
         )
 
+        # ── Fallback por nome quando task_id e código não resolvem ──
+        if task is None:
+            titulo_canon = _get_titulo_canonical(atividade, codigo)
+            task = _buscar_task_por_nome(titulo_canon, idx_by_id)
+            if task:
+                logger.debug(
+                    "Atividade %s: task encontrada por nome: '%s'",
+                    codigo, titulo_canon,
+                )
+
         if task is None:
             codigos_sem_task.append(codigo)
             logger.warning(
@@ -369,8 +395,6 @@ def executar(
                 pass
 
         # ── Datas: extrai do bloco 'datas' do JSON canônico ─────────────
-        # AtividadePDF sintético para propagar datas ao builder (prioridade 2).
-        # O builder consulta apenas data_inicio_abs e data_fim_abs.
         data_inicio_canon, data_fim_canon = _get_datas_canonicas(atividade)
         pdf_atv_sintetico = None
         if data_inicio_canon or data_fim_canon:
@@ -405,12 +429,14 @@ def executar(
         logger.info("Códigos processados: %s", codigos_encontrados)
 
     if not contextos:
+        codigos_disponiveis = sorted(set(c for c in todos_codigos if c))
         logger.warning(
             "Nenhum contexto montado.\n"
-            "  Filtro solicitado  : %s\n"
-            "  Todos os códigos   : %s",
+            "  Filtro solicitado    : %s\n"
+            "  Códigos no relatório : %s\n"
+            "  Dica: verifique se o filtro usa os códigos exatamente como aparecem acima.",
             atividades_filtro,
-            sorted(set(todos_codigos))[:20],
+            codigos_disponiveis[:30],
         )
 
     # ── 5. Executa pipeline de agentes ────────────────────────────
