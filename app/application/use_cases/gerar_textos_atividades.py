@@ -27,7 +27,7 @@ Indexação do snapshot:
     Fallback adicional:
       - busca por similaridade de nome quando task_id e código falham.
 
-Estruturas de JSON suportadas em _iter_atividades:
+Estruturas de JSON suportadas em _iter_atividades (detecção exclusiva, ordem de prioridade):
     1. Canônica (Pydantic snake_case):
          { "metas": [ { "atividades": [...] } ] }
     2. Legado notebooks (relatorio_com_progresso_clickup_api.json):
@@ -38,6 +38,9 @@ Estruturas de JSON suportadas em _iter_atividades:
          } } }
     3. Alternativa legado simples:
          { "itens": [ { "atividades": [...] } ] }
+
+    IMPORTANTE: apenas UMA estrutura é iterada por execução (elif exclusivo),
+    evitando duplicação/triplicação quando o JSON satisfaz múltiplos formatos.
 
 Arquitetura LLM:
     Recebe llm_client já instanciado pelo pipeline_completo.py
@@ -133,7 +136,11 @@ def _get_datas_canonicas(atividade: dict):
 
 def _iter_atividades(relatorio: dict):
     """
-    Itera sobre todas as atividades do relatório tolerando 3 estruturas:
+    Itera sobre todas as atividades do relatório detectando exclusivamente
+    qual estrutura o JSON possui (elif), evitando duplicação quando o mesmo
+    JSON satisfaz múltiplos formatos simultaneamente.
+
+    Ordem de prioridade:
 
     1. Canônica nova (Pydantic snake_case):
          relatorio["metas"][*]["atividades"]
@@ -148,26 +155,29 @@ def _iter_atividades(relatorio: dict):
     """
     encontrou = False
 
-    # ── Estrutura 1: canônica ──────────────────────────────────────
-    for meta in relatorio.get("metas", []):
-        for atv in meta.get("atividades", []):
-            encontrou = True
-            yield atv
+    # ── Estrutura 1: canônica (prioridade máxima) ──────────────────
+    if relatorio.get("metas"):
+        for meta in relatorio["metas"]:
+            for atv in meta.get("atividades", []):
+                encontrou = True
+                yield atv
 
-    # ── Estrutura 2: legado notebooks ────────────────────────────
-    relatorio_inner = relatorio.get("relatorio", {})
-    secoes = relatorio_inner.get("secoes_fixas", {})
-    tabela = secoes.get("3_tabela_resumo_execucao_cronograma_fisico", {})
-    for meta in tabela.get("itens_meta_atividade", []):
-        for atv in meta.get("atividades", []):
-            encontrou = True
-            yield atv
+    # ── Estrutura 2: legado notebooks (só se estrutura 1 ausente) ──
+    elif relatorio.get("relatorio"):
+        relatorio_inner = relatorio.get("relatorio", {})
+        secoes = relatorio_inner.get("secoes_fixas", {})
+        tabela = secoes.get("3_tabela_resumo_execucao_cronograma_fisico", {})
+        for meta in tabela.get("itens_meta_atividade", []):
+            for atv in meta.get("atividades", []):
+                encontrou = True
+                yield atv
 
-    # ── Estrutura 3: alternativa legado simples ──────────────────────
-    for item in relatorio.get("itens", []):
-        for atv in item.get("atividades", []):
-            encontrou = True
-            yield atv
+    # ── Estrutura 3: alternativa legado simples ─────────────────────
+    elif relatorio.get("itens"):
+        for item in relatorio["itens"]:
+            for atv in item.get("atividades", []):
+                encontrou = True
+                yield atv
 
     if not encontrou:
         chaves = list(relatorio.keys())
