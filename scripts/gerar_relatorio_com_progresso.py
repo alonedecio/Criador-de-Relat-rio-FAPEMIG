@@ -8,6 +8,7 @@ Fluxo correto:
   4. Carrega PDF do projeto e extrai datas de cada atividade
   5. Roda MontarContextosUseCase → calcula progresso e preenche datas
   6. Injeta resultado de volta no relatório canônico
+  6b. Agrega progresso_calculado_meta em cada meta (média simples das atividades)
   7. Exporta relatorio_final_com_progresso.json
 
 Rodar: python -m scripts.gerar_relatorio_com_progresso
@@ -24,6 +25,7 @@ from app.domain.clickup.models import ClickUpEnrichedSnapshot, ClickUpTaskEnrich
 from app.domain.projects.pdf_reader import ler_pdf_projeto
 from app.domain.projects.pdf_extractor import extrair_projeto
 from app.application.use_cases.montar_contextos import EnrichedIndex, MontarContextosUseCase
+from app.domain.reporting.progress import calcular_progresso_meta
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +33,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── paths ─────────────────────────────────────────────────────────────────────
+# ── paths ──────────────────────────────────────────────────────────────
 
 SNAPSHOT_PATH = Path("data/input/clickup_enriched_snapshot.json")
 PDF_PATH      = Path("data/input/termo_projeto.pdf")
@@ -40,7 +42,7 @@ OUTPUT_PATH   = Path("data/output/relatorio_final_com_progresso.json")
 _RE_CODIGO = re.compile(r"^(\d+\.\d+)")
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
+# ── helpers ────────────────────────────────────────────────────────────────
 
 def _carregar_snapshot(path: Path) -> tuple[dict, list[ClickUpTaskEnriched]]:
     """
@@ -146,7 +148,7 @@ def _montar_index(tasks: list[ClickUpTaskEnriched]) -> EnrichedIndex:
     return EnrichedIndex(task_por_codigo=index)
 
 
-# ── pipeline ──────────────────────────────────────────────────────────────────
+# ── pipeline ──────────────────────────────────────────────────────────────
 
 def main() -> None:
     # 1. carrega snapshot
@@ -193,6 +195,20 @@ def main() -> None:
             if ctx.progresso:
                 atv.progresso = ctx.progresso
 
+    # 6b. agrega progresso_calculado_meta em cada meta (média das atividades-filhas)
+    for meta in relatorio.metas:
+        atividades_dicts = [
+            atv.model_dump() if hasattr(atv, "model_dump") else dict(atv)
+            for atv in meta.atividades
+        ]
+        meta.progresso_calculado_meta = calcular_progresso_meta(atividades_dicts)
+        logger.info(
+            "Meta %s → realizado=%.1f%% previsto=%.1f%%",
+            meta.numero_meta,
+            meta.progresso_calculado_meta.get("realizado_percentual") or 0.0,
+            meta.progresso_calculado_meta.get("previsto_percentual") or 0.0,
+        )
+
     # 7. exporta JSON final
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(
@@ -201,7 +217,7 @@ def main() -> None:
     )
     logger.info("JSON final gerado em: %s", OUTPUT_PATH)
 
-    # ── diagnóstico no terminal ───────────────────────────────────────────────
+    # ── diagnóstico no terminal ─────────────────────────────────────────────
     print("\n" + "=" * 60)
     print(resultado.resumo())
     print("=" * 60)
