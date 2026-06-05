@@ -39,8 +39,11 @@ Estruturas de JSON suportadas em _iter_atividades (detecção exclusiva, ordem d
     3. Alternativa legado simples:
          { "itens": [ { "atividades": [...] } ] }
 
-    IMPORTANTE: apenas UMA estrutura é iterada por execução (elif exclusivo),
-    evitando duplicação/triplicação quando o JSON satisfaz múltiplos formatos.
+    IMPORTANTE: apenas UMA estrutura é iterada por execução (elif exclusivo).
+    Além disso, há deduplicacão defensiva por código: se o próprio JSON contiver
+    a mesma atividade duplicada dentro da estrutura, ela é processada apenas uma
+    vez e um WARNING é emitido apontando os códigos afetados para rastreamento
+    do problema na fonte (script gerador do JSON).
 
 Arquitetura LLM:
     Recebe llm_client já instanciado pelo pipeline_completo.py
@@ -140,6 +143,11 @@ def _iter_atividades(relatorio: dict):
     qual estrutura o JSON possui (elif), evitando duplicação quando o mesmo
     JSON satisfaz múltiplos formatos simultaneamente.
 
+    Além disso aplica deduplicacão defensiva por código: se o próprio JSON
+    contiver atividades duplicadas dentro da estrutura selecionada, cada
+    código é yielded apenas uma vez. Um WARNING é emitido listando os códigos
+    duplicados para rastreamento do problema na fonte (script gerador).
+
     Ordem de prioridade:
 
     1. Canônica nova (Pydantic snake_case):
@@ -153,14 +161,15 @@ def _iter_atividades(relatorio: dict):
     3. Alternativa legado simples:
          relatorio["itens"][*]["atividades"]
     """
+    candidatas: list[dict] = []
     encontrou = False
 
     # ── Estrutura 1: canônica (prioridade máxima) ──────────────────
     if relatorio.get("metas"):
         for meta in relatorio["metas"]:
             for atv in meta.get("atividades", []):
+                candidatas.append(atv)
                 encontrou = True
-                yield atv
 
     # ── Estrutura 2: legado notebooks (só se estrutura 1 ausente) ──
     elif relatorio.get("relatorio"):
@@ -169,22 +178,44 @@ def _iter_atividades(relatorio: dict):
         tabela = secoes.get("3_tabela_resumo_execucao_cronograma_fisico", {})
         for meta in tabela.get("itens_meta_atividade", []):
             for atv in meta.get("atividades", []):
+                candidatas.append(atv)
                 encontrou = True
-                yield atv
 
     # ── Estrutura 3: alternativa legado simples ─────────────────────
     elif relatorio.get("itens"):
         for item in relatorio["itens"]:
             for atv in item.get("atividades", []):
+                candidatas.append(atv)
                 encontrou = True
-                yield atv
 
     if not encontrou:
-        chaves = list(relatorio.keys())
         logger.warning(
             "_iter_atividades: nenhuma atividade encontrada. "
             "Chaves raiz do JSON: %s",
-            chaves,
+            list(relatorio.keys()),
+        )
+        return
+
+    # ── Deduplicacão defensiva por código ───────────────────────────
+    vistos: set[str] = set()
+    duplicados: list[str] = []
+
+    for atv in candidatas:
+        codigo = _get_codigo(atv)
+        chave = codigo or id(atv)  # sem código: usa identidade do objeto
+        if chave in vistos:
+            duplicados.append(codigo or "<sem-codigo>")
+            continue
+        vistos.add(chave)
+        yield atv
+
+    if duplicados:
+        logger.warning(
+            "_iter_atividades: %d atividade(s) duplicada(s) ignorada(s) — "
+            "códigos: %s. "
+            "Verifique o script gerador do JSON (build_report_with_progress.py).",
+            len(duplicados),
+            duplicados,
         )
 
 
