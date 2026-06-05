@@ -1,32 +1,43 @@
 """Renderizador HTML a partir do relatório canônico JSON.
 
-Gera HTML navegável para as seções do Relatório de Acompanhamento Técnico:
+Gera HTML navigável para as seções do Relatório de Acompanhamento Técnico (RAT):
   - Seção 3: Tabela resumo da execução do cronograma físico
   - Seção 4: Execução detalhada por meta física (desenvolvimento, resultados, justificativa)
-  - Seção 5: Resumo do período
-  - Seção 6: Dificuldades não técnicas
-  - Seção 7: Capacitações da equipe
-  - Seção 8: Melhorias nas instalações físicas
-  - Seção 9: Impactos internos e externos
-  - Seção 10: Produção tecnológica, parcerias e comentário final
+  - Seção 5: Avaliação da gestão (capacitações, melhorias, dificuldades consolidadas)
+  - Seção 6: Desdobramentos e impactos (3 sub-campos)
+  - Seção 7: Produção tecnológica
+  - Seção 8: Parcerias institucionais
+  - Seção 9: Comentário final
+  - Seção 10: Resumo executivo e palavras-chave
 
 O HTML é autocontido (CSS inline) para facilitar cópia para Word/sistema de relatórios.
 
 Mapeamento real do JSON canônico (relatorio_final_completo.json):
-  meta.item                       → número da meta (ex: "1", "2")
-  meta.meta_nome                  → título da meta
-  meta.percentual_meta            → % realizado da meta (float direto)
-  meta.progresso                  → dict com campos de progresso da meta
+  meta.item                           → número da meta (ex: "1", "2")
+  meta.meta_nome                      → título da meta
+  meta.percentual_meta                → % realizado da meta (float direto)
+  meta.progresso                      → dict com campos de progresso da meta
   atividade.numero_atividade_original → código ex: "1.1"
   atividade.titulo / titulo_original  → título da atividade
-  atividade.indicador_fisico      → indicador físico
-  atividade.percentual_realizado  → % realizado (float direto)
-  atividade.progresso             → dict com previsto_percentual, realizado_percentual, situacao_prazo, atrasada
-  atividade.desenvolvimento       → texto gerado pela IA (só no JSON com textos)
-  atividade.resultados            → texto gerado pela IA
-  atividade.justificativa         → texto gerado pela IA
-  atividade.texto                 → dict alternativo com as mesmas chaves (fallback)
-  secoes_finais.*                 → textos gerados para as seções 5-10 do RAT
+  atividade.indicador_fisico          → indicador físico
+  atividade.percentual_realizado      → % realizado (float direto)
+  atividade.progresso                 → dict com previsto_percentual, realizado_percentual, situacao_prazo, atrasada
+  atividade.desenvolvimento           → texto gerado pela IA (só no JSON com textos)
+  atividade.resultados                → texto gerado pela IA
+  atividade.justificativa             → texto gerado pela IA
+  atividade.texto                     → dict alternativo com as mesmas chaves (fallback)
+  secoes_finais.*                     → textos gerados para as seções 5-10 do RAT
+
+Campos de secoes_finais (alinhados a TextosSecaoFinal v2):
+  avaliacao_gestao        → Tópico 5
+  desdobramentos_internos → Tópico 6a
+  posicionamento_mercado  → Tópico 6b
+  beneficios_sociais      → Tópico 6c
+  producao_tecnologica    → Tópico 7
+  parcerias_institucionais→ Tópico 8
+  comentario_final        → Tópico 9
+  resumo                  → Tópico 10a
+  palavras_chave          → Tópico 10b (lista)
 """
 from __future__ import annotations
 
@@ -35,9 +46,9 @@ from pathlib import Path
 from typing import Any
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 # helpers internos
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 
 def _pct(value: Any, fallback: str = "—") -> str:
     """Formata percentual como string com símbolo %. Aceita float, int ou str."""
@@ -138,7 +149,6 @@ def _barra_progresso(realizado: Any, previsto: Any) -> str:
     except (TypeError, ValueError):
         p = 0
 
-    # Se não tem previsto, barra simples só com realizado
     cor_r = "#1a6a9a" if (p == 0 or r >= p * 0.8) else "#b84c00"
     barra_prev = (
         f'<div title="Previsto: {p:.0f}%" style="position:absolute;height:100%;'
@@ -158,9 +168,9 @@ def _barra_progresso(realizado: Any, previsto: Any) -> str:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 # CSS base (autocontido, sem dependências externas)
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 
 _CSS = """
 :root {
@@ -189,7 +199,7 @@ body {
 }
 .page-wrap { max-width: 1080px; margin: 0 auto; }
 
-/* ── Cabeçalho ─────────────────────────────────── */
+/* ── Cabeçalho ─────────────────────────────────────────── */
 .report-header {
   background: var(--primary);
   color: #fff;
@@ -215,7 +225,7 @@ body {
   gap: 4px 16px;
 }
 
-/* ── Navegação âncoras ─────────────────────────── */
+/* ── Navegação âncoras ────────────────────────────────── */
 .toc {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -254,7 +264,7 @@ body {
   border-color: #b0cccb;
 }
 
-/* ── Seção ─────────────────────────────────────── */
+/* ── Seção ─────────────────────────────────────────────── */
 .section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -275,7 +285,7 @@ body {
 .sec-title { font-size: .95rem; font-weight: 600; }
 .section-body { padding: 20px; }
 
-/* ── Aviso campos manuais ──────────────────────── */
+/* ── Aviso campos manuais ──────────────────────────────── */
 .manual-hint {
   background: #fffbeb;
   border: 1px solid #f0c040;
@@ -289,7 +299,7 @@ body {
 }
 .manual-hint strong { display: block; margin-bottom: 2px; font-size: .8rem; }
 
-/* ── Tabela resumo ─────────────────────────────── */
+/* ── Tabela resumo ─────────────────────────────────────── */
 table.resumo {
   width: 100%;
   border-collapse: collapse;
@@ -321,7 +331,7 @@ table.resumo tr.meta-row td {
 }
 table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
 
-/* ── Meta block ────────────────────────────────── */
+/* ── Meta block ───────────────────────────────────────────── */
 .meta-block {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -353,7 +363,7 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
 }
 .meta-progress-wrap { margin-left: auto; min-width: 150px; }
 
-/* ── Atividade block ───────────────────────────── */
+/* ── Atividade block ─────────────────────────────────────── */
 .atividade-block {
   border-top: 1px solid #eeece9;
   padding: 14px 16px 16px;
@@ -390,7 +400,7 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
 }
 .indicador strong { color: var(--primary-dark); }
 
-/* ── Campos de texto ───────────────────────────── */
+/* ── Campos de texto ───────────────────────────────────────── */
 .atv-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -424,7 +434,7 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
   font-size: .78rem;
 }
 
-/* ── Seções finais (5-10) ──────────────────────── */
+/* ── Seções finais (5-10) ────────────────────────────────── */
 .secao-final-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -479,6 +489,21 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
   line-height: 1.7;
   white-space: pre-wrap;
 }
+.palavras-chave-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.palavra-chave-tag {
+  background: var(--primary-light);
+  border: 1px solid #b8d4d2;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: .74rem;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
 .comentario-final-box {
   background: #f0f7f6;
   border: 1px solid #b8d4d2;
@@ -502,7 +527,7 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
   white-space: pre-wrap;
 }
 
-/* ── Responsivo ────────────────────────────────── */
+/* ── Responsivo ───────────────────────────────────────────── */
 @media (max-width: 700px) {
   .atv-fields { grid-template-columns: 1fr; }
   .field-box.full-width { grid-column: 1; }
@@ -515,9 +540,9 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
 """
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 # Seção 3 — Tabela resumo do cronograma físico
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 
 def _render_secao3(metas: list[dict]) -> str:
     rows = []
@@ -592,9 +617,9 @@ def _render_secao3(metas: list[dict]) -> str:
 """
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 # Seção 4 — Execução detalhada por meta
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 
 def _render_atividade(atv: dict) -> str:
     codigo = _safe(atv.get("numero_atividade_original") or atv.get("numero_atividade"))
@@ -698,9 +723,9 @@ def _render_secao4(metas: list[dict]) -> str:
 """
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Seções 5-10 — Seções finais do RAT
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
+# Seções 5-10 — Seções finais do RAT (alinhadas ao formulário FAPEMIG)
+# ───────────────────────────────────────────────────────────────────────────────────
 
 def _card(emoji: str, label: str, texto: str, full_width: bool = False) -> str:
     """Renderiza um card de seção final."""
@@ -717,21 +742,126 @@ def _card(emoji: str, label: str, texto: str, full_width: bool = False) -> str:
 
 
 def _render_secao5(sf: dict) -> str:
-    """Seção 5 — Resumo do período."""
-    resumo = _safe(sf.get("resumo"), "")
-    pending = not resumo
-    resumo_html = (
-        f'<div class="resumo-destaque">'
-        f'<div class="card-label">📋 Resumo executivo do período</div>'
-        f'<div class="card-text{"" if resumo else " pending"}">'
-        f'{resumo if resumo else "Texto não gerado para esta seção."}'
-        f'</div></div>'
-    )
+    """Seção 5 — Avaliação da gestão (capacitações, melhorias, dificuldades consolidadas)."""
+    texto = _safe(sf.get("avaliacao_gestao"), "")
     return f"""
 <div class="section" id="secao5">
   <div class="section-header">
     <span class="sec-num">5.</span>
-    <span class="sec-title">Resumo das atividades desenvolvidas no período</span>
+    <span class="sec-title">Avaliação da gestão: capacitações, melhorias e dificuldades não técnicas</span>
+  </div>
+  <div class="section-body">
+    {_card("📋", "Avaliação da gestão do projeto", texto, full_width=True)}
+  </div>
+</div>
+"""
+
+
+def _render_secao6(sf: dict) -> str:
+    """Seção 6 — Desdobramentos e impactos (3 sub-campos)."""
+    desdobramentos = _safe(sf.get("desdobramentos_internos"), "")
+    posicionamento = _safe(sf.get("posicionamento_mercado"), "")
+    beneficios = _safe(sf.get("beneficios_sociais"), "")
+    return f"""
+<div class="section" id="secao6">
+  <div class="section-header">
+    <span class="sec-num">6.</span>
+    <span class="sec-title">Desdobramentos internos, posicionamento de mercado e benefícios sociais</span>
+  </div>
+  <div class="section-body">
+    <div class="secao-final-grid">
+      {_card("🏢", "Desdobramentos internos", desdobramentos)}
+      {_card("📈", "Posicionamento de mercado", posicionamento)}
+    </div>
+    <div style="margin-top:14px">
+      {_card("🌍", "Benefícios sociais", beneficios, full_width=True)}
+    </div>
+  </div>
+</div>
+"""
+
+
+def _render_secao7(sf: dict) -> str:
+    """Seção 7 — Produção tecnológica."""
+    texto = _safe(sf.get("producao_tecnologica"), "")
+    return f"""
+<div class="section" id="secao7">
+  <div class="section-header">
+    <span class="sec-num">7.</span>
+    <span class="sec-title">Produção tecnológica gerada no período</span>
+  </div>
+  <div class="section-body">
+    {_card("🔬", "Produção tecnológica", texto, full_width=True)}
+  </div>
+</div>
+"""
+
+
+def _render_secao8(sf: dict) -> str:
+    """Seção 8 — Parcerias institucionais."""
+    texto = _safe(sf.get("parcerias_institucionais"), "")
+    return f"""
+<div class="section" id="secao8">
+  <div class="section-header">
+    <span class="sec-num">8.</span>
+    <span class="sec-title">Parcerias e articulações institucionais</span>
+  </div>
+  <div class="section-body">
+    {_card("🤝", "Parcerias institucionais", texto, full_width=True)}
+  </div>
+</div>
+"""
+
+
+def _render_secao9(sf: dict) -> str:
+    """Seção 9 — Comentário final do período."""
+    texto = _safe(sf.get("comentario_final"), "")
+    return f"""
+<div class="section" id="secao9">
+  <div class="section-header">
+    <span class="sec-num">9.</span>
+    <span class="sec-title">Comentário final do gestor</span>
+  </div>
+  <div class="section-body">
+    <div class="comentario-final-box">
+      <div class="card-label">💬 Comentário final</div>
+      <div class="card-text{'' if texto else ' pending'}">{texto or 'Texto não gerado para esta seção.'}</div>
+    </div>
+  </div>
+</div>
+"""
+
+
+def _render_secao10(sf: dict) -> str:
+    """Seção 10 — Resumo executivo e palavras-chave."""
+    resumo = _safe(sf.get("resumo"), "")
+    palavras_raw = sf.get("palavras_chave") or []
+    if isinstance(palavras_raw, str):
+        palavras = [p.strip() for p in palavras_raw.split(",") if p.strip()]
+    elif isinstance(palavras_raw, list):
+        palavras = [str(p).strip() for p in palavras_raw if str(p).strip()]
+    else:
+        palavras = []
+
+    tags_html = ""
+    if palavras:
+        tags = "".join(
+            f'<span class="palavra-chave-tag">{p}</span>' for p in palavras
+        )
+        tags_html = f'<div class="palavras-chave-box">{tags}</div>'
+
+    resumo_html = f"""
+<div class="resumo-destaque">
+  <div class="card-label">📋 Resumo executivo do período</div>
+  <div class="card-text{'' if resumo else ' pending'}">{resumo or 'Texto não gerado para esta seção.'}</div>
+  {f'<div style="margin-top:14px"><div class="card-label" style="margin-bottom:6px">🏷️ Palavras-chave</div>{tags_html}</div>' if tags_html else ''}
+</div>"""
+
+    return f"""
+<div class="section" id="secao10">
+  <div class="section-header">
+    <span class="sec-num">10.</span>
+    <span class="sec-title">Resumo executivo e palavras-chave</span>
   </div>
   <div class="section-body">
     {resumo_html}
@@ -740,107 +870,9 @@ def _render_secao5(sf: dict) -> str:
 """
 
 
-def _render_secao6(sf: dict) -> str:
-    """Seção 6 — Dificuldades não técnicas."""
-    texto = _safe(sf.get("dificuldades_nao_tecnicas"), "")
-    return f"""
-<div class="section" id="secao6">
-  <div class="section-header">
-    <span class="sec-num">6.</span>
-    <span class="sec-title">Dificuldades não técnicas encontradas na execução do projeto</span>
-  </div>
-  <div class="section-body">
-    {_card("⚠️", "Dificuldades não técnicas", texto, full_width=True)}
-  </div>
-</div>
-"""
-
-
-def _render_secao7(sf: dict) -> str:
-    """Seção 7 — Capacitações da equipe."""
-    texto = _safe(sf.get("capacitacoes_equipe"), "")
-    return f"""
-<div class="section" id="secao7">
-  <div class="section-header">
-    <span class="sec-num">7.</span>
-    <span class="sec-title">Capacitações realizadas pela equipe do projeto</span>
-  </div>
-  <div class="section-body">
-    {_card("🎓", "Capacitações da equipe", texto, full_width=True)}
-  </div>
-</div>
-"""
-
-
-def _render_secao8(sf: dict) -> str:
-    """Seção 8 — Melhorias nas instalações físicas."""
-    texto = _safe(sf.get("melhorias_instalacoes"), "")
-    return f"""
-<div class="section" id="secao8">
-  <div class="section-header">
-    <span class="sec-num">8.</span>
-    <span class="sec-title">Melhorias nas instalações físicas</span>
-  </div>
-  <div class="section-body">
-    {_card("🏗️", "Melhorias nas instalações", texto, full_width=True)}
-  </div>
-</div>
-"""
-
-
-def _render_secao9(sf: dict) -> str:
-    """Seção 9 — Impactos internos e externos."""
-    internos = _safe(sf.get("impactos_internos"), "")
-    externos = _safe(sf.get("impactos_externos"), "")
-    return f"""
-<div class="section" id="secao9">
-  <div class="section-header">
-    <span class="sec-num">9.</span>
-    <span class="sec-title">Impactos gerados pelo projeto</span>
-  </div>
-  <div class="section-body">
-    <div class="secao-final-grid">
-      {_card("🏢", "Impactos internos", internos)}
-      {_card("🌍", "Impactos externos e sociais", externos)}
-    </div>
-  </div>
-</div>
-"""
-
-
-def _render_secao10(sf: dict) -> str:
-    """Seção 10 — Produção tecnológica, parcerias e comentário final."""
-    producao = _safe(sf.get("producao_tecnologica"), "")
-    parcerias = _safe(sf.get("parcerias_institucionais"), "")
-    comentario = _safe(sf.get("comentario_final"), "")
-    comentario_html = ""
-    if comentario:
-        comentario_html = (
-            f'<div class="comentario-final-box">'
-            f'<div class="card-label">💬 Comentário final do período</div>'
-            f'<div class="card-text">{comentario}</div>'
-            f'</div>'
-        )
-    return f"""
-<div class="section" id="secao10">
-  <div class="section-header">
-    <span class="sec-num">10.</span>
-    <span class="sec-title">Produção tecnológica, parcerias e considerações finais</span>
-  </div>
-  <div class="section-body">
-    <div class="secao-final-grid">
-      {_card("🔬", "Produção tecnológica gerada", producao)}
-      {_card("🤝", "Parcerias e articulações institucionais", parcerias)}
-    </div>
-    {comentario_html}
-  </div>
-</div>
-"""
-
-
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 # Cabeçalho e TOC
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 
 def _render_header(relatorio: dict) -> str:
     meta_dados = relatorio.get("metadata") or {}
@@ -877,12 +909,12 @@ def _render_toc(metas: list[dict], tem_secoes_finais: bool = False) -> str:
         )
     if tem_secoes_finais:
         itens += [
-            '<li><a href="#secao5">5. Resumo do período</a></li>',
-            '<li><a href="#secao6">6. Dificuldades</a></li>',
-            '<li><a href="#secao7">7. Capacitações</a></li>',
-            '<li><a href="#secao8">8. Instalações</a></li>',
-            '<li><a href="#secao9">9. Impactos</a></li>',
-            '<li><a href="#secao10">10. Produção / Parcerias</a></li>',
+            '<li><a href="#secao5">5. Avaliação da gestão</a></li>',
+            '<li><a href="#secao6">6. Desdobramentos e impactos</a></li>',
+            '<li><a href="#secao7">7. Produção tecnológica</a></li>',
+            '<li><a href="#secao8">8. Parcerias</a></li>',
+            '<li><a href="#secao9">9. Comentário final</a></li>',
+            '<li><a href="#secao10">10. Resumo / Palavras-chave</a></li>',
         ]
     return f"""
 <nav class="toc">
@@ -892,9 +924,9 @@ def _render_toc(metas: list[dict], tem_secoes_finais: bool = False) -> str:
 """
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 # Ponto de entrada principal
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────
 
 def gerar_html(relatorio: dict) -> str:
     """Gera o HTML completo (Seções 3-10) a partir do JSON canônico."""
