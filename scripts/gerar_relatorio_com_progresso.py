@@ -8,7 +8,7 @@ Fluxo correto:
   4. Carrega PDF do projeto e extrai datas de cada atividade
   5. Roda MontarContextosUseCase → calcula progresso e preenche datas
   6. Injeta resultado de volta no relatório canônico
-  6b. Agrega progresso_calculado_meta em cada meta (média simples das atividades)
+  6b. Agrega progresso da meta-pai (média simples das atividades-filhas)
   7. Exporta relatorio_final_com_progresso.json
 
 Rodar: python -m scripts.gerar_relatorio_com_progresso
@@ -25,6 +25,7 @@ from app.domain.clickup.models import ClickUpEnrichedSnapshot, ClickUpTaskEnrich
 from app.domain.projects.pdf_reader import ler_pdf_projeto
 from app.domain.projects.pdf_extractor import extrair_projeto
 from app.application.use_cases.montar_contextos import EnrichedIndex, MontarContextosUseCase
+from app.domain.reporting.canonical_schemas import ProgressoMetaCanonico
 from app.domain.reporting.progress import calcular_progresso_meta
 
 logging.basicConfig(
@@ -195,18 +196,24 @@ def main() -> None:
             if ctx.progresso:
                 atv.progresso = ctx.progresso
 
-    # 6b. agrega progresso_calculado_meta em cada meta (média das atividades-filhas)
+    # 6b. agrega progresso da meta-pai (média das atividades-filhas)
+    #     Popula meta.progresso com ProgressoMetaCanonico usando os campos corretos
+    #     do schema: previsto_percentual_medio e realizado_percentual_medio.
     for meta in relatorio.metas:
         atividades_dicts = [
             atv.model_dump() if hasattr(atv, "model_dump") else dict(atv)
             for atv in meta.atividades
         ]
-        meta.progresso_calculado_meta = calcular_progresso_meta(atividades_dicts)
+        agregado = calcular_progresso_meta(atividades_dicts)
+        meta.progresso = ProgressoMetaCanonico(
+            realizado_percentual_medio=agregado.get("realizado_percentual"),
+            previsto_percentual_medio=agregado.get("previsto_percentual"),
+        )
         logger.info(
             "Meta %s → realizado=%.1f%% previsto=%.1f%%",
-            meta.numero_meta,
-            meta.progresso_calculado_meta.get("realizado_percentual") or 0.0,
-            meta.progresso_calculado_meta.get("previsto_percentual") or 0.0,
+            meta.numero_meta if hasattr(meta, 'numero_meta') else meta.item,
+            agregado.get("realizado_percentual") or 0.0,
+            agregado.get("previsto_percentual") or 0.0,
         )
 
     # 7. exporta JSON final
