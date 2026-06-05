@@ -33,6 +33,11 @@ ATENÇÃO — REGRAS INEGOCIÁVEIS:
 6. O campo 'justificativa' só deve ser preenchido com conteúdo substantivo quando houver atraso ou adiantamento real. Se a atividade está no prazo, escreva "A atividade encontra-se dentro do cronograma previsto."
 7. SOBRE ANEXOS: quando a atividade possui anexos registrados, você pode mencionar a existência do anexo como evidência de execução e, pelo título, inferir o tipo de evidência (ex: se o título contém "planilha", "lista", "ata", "relatório", "fotos", "certificado", infira o que representa). Não invente o conteúdo do anexo — apenas reconheça sua existência como indicador de execução.
 8. SOBRE ITENS DE AÇÃO: quando campos customizados (customfields) da task estão disponíveis, use-os como evidência adicional sobre o estado e resultado da atividade. Não invente valores não listados.
+9. SOBRE PROGRESSO ZERO COM STATUS ATIVO: quando o status da atividade é 'em progresso' (ou equivalente) mas o percentual realizado é 0.0%, isso indica que a atividade foi iniciada formalmente mas ainda não gerou entregas mensuráveis no sistema. Nesse caso, adote a seguinte narrativa coerente:
+   - No campo 'desenvolvimento': descreva as ações previstas para esta atividade e registre que ela se encontra em fase inicial de execução, sem entregas consolidadas até o momento.
+   - No campo 'resultados': escreva "A atividade encontra-se em fase inicial de execução. Não há entregas consolidadas registradas para este período."
+   - No campo 'justificativa': foque exclusivamente no atraso em relação à data prevista, sem mencionar dúvida sobre o início da atividade.
+   PROIBIDO: afirmar simultaneamente que 'a atividade está em progresso' E que 'o início efetivo ainda não ocorreu'. Escolha uma narrativa única e mantenha-a nos três campos.
 
 
 CONTEXTO DO PROJETO (use para dar coerência institucional aos textos):
@@ -148,21 +153,21 @@ Data fim prevista: {ctx.data_fim or 'Não informada'}
 {customfields_txt}
 
 
-━━ COMENTÁRIOS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ COMENTÁRIOS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━
 {comentarios_txt}
 
 
-━━ CHECKLISTS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ CHECKLISTS (ClickUp) ━━━━━━━━━━━━━━━━━━━━━━━
 {checklists_txt}
 
 
-━━ ANEXOS REGISTRADOS (ClickUp) ━━━━━━━━━━━━━━━━━━━
+━━ ANEXOS REGISTRADOS (ClickUp) ━━━━━━━━━━━━━━━
 {anexos_txt}
 (Você não tem acesso ao conteúdo dos anexos. Use o título como indicador
  do tipo de evidência produzida. Não invente o conteúdo.)
 
 
-━━ CAMPOS A PREENCHER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━ CAMPOS A PREENCHER ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Responda em JSON com exatamente estas três chaves:
 
 {{
@@ -189,6 +194,7 @@ Sua função é verificar se os textos gerados pelo writer estão:
 6. Com justificativa consistente: presente quando há atraso/adiantamento real, neutra quando no prazo
 7. Sobre anexos: verificar se o writer mencionou anexos de forma coerente — se há anexos registrados e a atividade está concluída, o texto de resultados deve reconhecer a existência de evidência
 8. Sobre itens de ação: verificar se o writer fez uso coerente dos customfields quando disponíveis
+9. SOBRE PROGRESSO ZERO COM STATUS ATIVO: quando status é 'em progresso' e realizado é 0.0%, o texto correto é afirmar que a atividade está em fase inicial de execução sem entregas consolidadas. NÃO reprove esse caso como contradição — é um estado válido. Reprove apenas se o writer afirmar simultaneamente que 'está em progresso' E que 'o início efetivo ainda não ocorreu'.
 
 
 Responda em JSON com exatamente este formato:
