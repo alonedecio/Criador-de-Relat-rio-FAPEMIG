@@ -100,9 +100,6 @@ def _sep(titulo: str) -> None:
 
 
 def _is_campo_preenchido(v) -> bool:
-    """Verifica se um campo de seção final está preenchido.
-    Tolera str, list, dict — qualquer valor não-vazio conta como preenchido.
-    """
     if v is None:
         return False
     if isinstance(v, str):
@@ -115,11 +112,6 @@ def _is_campo_preenchido(v) -> bool:
 
 
 def _build_llm_client(model: str):
-    """
-    Instancia cliente LLM seguindo a arquitetura Ed Donner:
-    - Gemini: openai.OpenAI apontando para base_url do Google
-    - OpenAI: openai.OpenAI padrão
-    """
     try:
         from openai import OpenAI
     except ImportError:
@@ -145,7 +137,6 @@ def _build_llm_client(model: str):
         logger.error("OPENAI_API_KEY não encontrada no .env")
         sys.exit(1)
     logger.info("LLM client: OpenAI SDK → OpenAI API (%s)", model)
-    from openai import OpenAI
     return OpenAI(api_key=openai_key)
 
 
@@ -203,19 +194,42 @@ def etapa_3_relatorio_progresso() -> None:
                 pass
     logger.info("%d tasks carregadas do enriched snapshot", len(tasks))
 
-    payload = {"tasks": []}
+    # CORRIGIDO: preserva parent e toplevelparent explicitamente.
+    # model_dump() com exclude_none=True omitiria campos None como 'parent',
+    # impedindo o mapper de vincular atividades às metas corretas.
+    payload_tasks = []
     for t in tasks:
         b = t.base
         d = b.model_dump()
+        # Garante que id e parent estejam presentes com os valores corretos
         d["id"] = t.task_id
+        d["parent"] = b.parent          # preserva None explicitamente
+        d["toplevelparent"] = b.toplevelparent  # idem
         d["custom_fields"] = t.customfields or b.customfields or []
-        payload["tasks"].append(d)
+        payload_tasks.append(d)
+
+    payload = {"tasks": payload_tasks}
+
+    # Log de diagnóstico: mostra alguns nomes para conferir o padrão
+    nomes_amostra = [d.get("name", "") for d in payload_tasks[:10]]
+    logger.info("Amostra de nomes das tasks (primeiras 10): %s", nomes_amostra)
+
     relatorio = to_report_base_from_clickup(payload)
     logger.info(
         "Relatório canônico: %d metas, %d atividades",
         len(relatorio.metas),
         sum(len(m.atividades) for m in relatorio.metas),
     )
+
+    if len(relatorio.metas) == 0:
+        logger.error(
+            "ATENÇÃO: nenhuma meta/atividade reconhecida no payload. "
+            "Verifique se os nomes das tasks seguem os padrões:\n"
+            "  Meta: 'Meta N - Título'\n"
+            "  Atividade: 'N.N - Título' (ou N.N – Título / N.N — Título)\n"
+            "Nomes completos das tasks estão no log acima (amostra). "
+            "Use --etapa-inicio 3 após corrigir os nomes."
+        )
 
     index_dict: dict = {}
     for task in tasks:

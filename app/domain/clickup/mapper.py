@@ -1,12 +1,15 @@
 import re
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 
 from app.domain.reporting.canonical_schemas import RelatorioCanonico, ResumoProjetoCanonico
 
+logger = logging.getLogger(__name__)
 
 PADRAO_META = re.compile(r"^Meta\s+(\d+)\s*-\s*(.+)$", re.IGNORECASE)
-PADRAO_ATIVIDADE = re.compile(r"^(\d+)\.(\d+)\s*[-–—]\s*(.+)$")
+# Aceita hífen simples (-), en-dash (–) e em-dash (—)
+PADRAO_ATIVIDADE = re.compile(r"^(\d+)\.(\d+)\s*[-\u2013\u2014]\s*(.+)$")
 PADRAO_NUMERO_ATIVIDADE = re.compile(r"^(\d+)\.(\d+)$")
 
 
@@ -31,7 +34,6 @@ def _extract_parent_id(task: dict) -> str | None:
     parent_id = _none_if_empty(task.get("parent"))
     if parent_id:
         return parent_id
-
     return _none_if_empty(task.get("toplevelparent"))
 
 
@@ -57,7 +59,6 @@ def _ts_to_iso(value) -> str | None:
         value = value.strip()
         if not value:
             return None
-        # Já é ISO date
         if re.match(r"^\d{4}-\d{2}-\d{2}", value):
             return value[:10]
         try:
@@ -67,7 +68,6 @@ def _ts_to_iso(value) -> str | None:
     if isinstance(value, float):
         value = int(value)
     if isinstance(value, int):
-        # ClickUp usa ms (13 dígitos); segundos têm 10 dígitos
         ts_s = value / 1000 if value > 9_999_999_999 else value
         try:
             return datetime.fromtimestamp(ts_s, tz=timezone.utc).strftime("%Y-%m-%d")
@@ -87,25 +87,21 @@ def _extract_dates(task: dict) -> dict:
 def _extract_custom_fields(task: dict) -> dict:
     fields = {}
     raw_fields = task.get("customfields", []) or task.get("custom_fields", []) or []
-
     for item in raw_fields:
         name = _normalize_str(item.get("name"))
         value = item.get("value")
         if name:
             fields[name] = value
-
     return fields
 
 
 def _extract_activity_parts(nome: str, custom_fields: dict) -> tuple[str | None, str | None, str, str]:
     nome = _normalize_str(nome)
     m = PADRAO_ATIVIDADE.match(nome)
-
     if m:
         numero = f"{m.group(1)}.{m.group(2)}"
         titulo = _normalize_str(m.group(3))
         return numero, numero, nome, titulo
-
     numero_custom = _none_if_empty(custom_fields.get("numero_atividade"))
     return numero_custom, numero_custom, nome, nome
 
@@ -121,10 +117,8 @@ def _atividade_sort_key(atividade: dict):
         atividade.get("numero_atividade_original") or atividade.get("numero_atividade")
     )
     m = PADRAO_NUMERO_ATIVIDADE.match(numero)
-
     if m:
         return (int(m.group(1)), int(m.group(2)))
-
     return (9999, 9999)
 
 
@@ -143,7 +137,7 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
     metas_por_id: dict[str, dict] = {}
     atividades_por_meta_id: dict[str, list] = defaultdict(list)
 
-    # --- Primeira passagem: identificar Metas pelo nome (independente de parent) ---
+    # --- Primeira passagem: identificar Metas pelo nome ---
     for task in tasks:
         base = _get_base_fields(task)
         nome = _extract_task_name(base)
@@ -174,6 +168,8 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
                 "realizado_percentual_medio": None,
             },
         }
+
+    logger.info("mapper: %d metas identificadas nas tasks", len(metas_por_id))
 
     # --- Segunda passagem: identificar Atividades cujo parent é uma Meta conhecida ---
     for task in tasks:
@@ -239,13 +235,26 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
     for meta_id, meta in metas_por_id.items():
         atividades = sorted(atividades_por_meta_id.get(meta_id, []), key=_atividade_sort_key)
 
+        # CORRIGIDO: antes descartava silenciosamente metas sem atividades.
+        # Agora emite WARNING para facilitar diagnóstico de nomes fora do padrão.
         if not atividades:
+            logger.warning(
+                "mapper: meta '%s' (id=%s) sem atividades reconhecidas — "
+                "verifique se os nomes das sub-tasks seguem o padrão 'N.N - Título'.",
+                meta.get("meta_nome"), meta_id,
+            )
             continue
 
         meta["atividades"] = atividades
         metas_ordenadas.append(meta)
 
     metas_ordenadas = sorted(metas_ordenadas, key=_meta_sort_key)
+
+    logger.info(
+        "mapper: %d metas com atividades → %d atividades no total",
+        len(metas_ordenadas),
+        sum(len(m["atividades"]) for m in metas_ordenadas),
+    )
 
     return RelatorioCanonico(
         metadata={
