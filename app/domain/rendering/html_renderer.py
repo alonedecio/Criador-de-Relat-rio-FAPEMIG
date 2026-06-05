@@ -3,6 +3,12 @@
 Gera HTML navegável para as seções do Relatório de Acompanhamento Técnico:
   - Seção 3: Tabela resumo da execução do cronograma físico
   - Seção 4: Execução detalhada por meta física (desenvolvimento, resultados, justificativa)
+  - Seção 5: Resumo do período
+  - Seção 6: Dificuldades não técnicas
+  - Seção 7: Capacitações da equipe
+  - Seção 8: Melhorias nas instalações físicas
+  - Seção 9: Impactos internos e externos
+  - Seção 10: Produção tecnológica, parcerias e comentário final
 
 O HTML é autocontido (CSS inline) para facilitar cópia para Word/sistema de relatórios.
 
@@ -20,6 +26,7 @@ Mapeamento real do JSON canônico (relatorio_final_completo.json):
   atividade.resultados            → texto gerado pela IA
   atividade.justificativa         → texto gerado pela IA
   atividade.texto                 → dict alternativo com as mesmas chaves (fallback)
+  secoes_finais.*                 → textos gerados para as seções 5-10 do RAT
 """
 from __future__ import annotations
 
@@ -299,7 +306,7 @@ table.resumo th {
 }
 table.resumo td {
   padding: 7px 10px;
-  border-bottom: 1px solid #eeecе9;
+  border-bottom: 1px solid #eeece9;
   vertical-align: middle;
   border-right: 1px solid #f0ede9;
 }
@@ -348,7 +355,7 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
 
 /* ── Atividade block ───────────────────────────── */
 .atividade-block {
-  border-top: 1px solid #eeecе9;
+  border-top: 1px solid #eeece9;
   padding: 14px 16px 16px;
 }
 .atv-header {
@@ -417,6 +424,84 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
   font-size: .78rem;
 }
 
+/* ── Seções finais (5-10) ──────────────────────── */
+.secao-final-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.secao-final-card {
+  background: #fafaf8;
+  border: 1px solid #e6e4e0;
+  border-radius: 5px;
+  padding: 14px 16px;
+}
+.secao-final-card.full-width { grid-column: 1 / -1; }
+.secao-final-card .card-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.secao-final-card .card-text {
+  font-size: .83rem;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.secao-final-card .card-text.pending {
+  color: var(--faint);
+  font-style: italic;
+}
+.resumo-destaque {
+  background: var(--primary-light);
+  border: 1px solid #b8d4d2;
+  border-radius: 5px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.resumo-destaque .card-label {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+.resumo-destaque .card-text {
+  font-size: .85rem;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.comentario-final-box {
+  background: #f0f7f6;
+  border: 1px solid #b8d4d2;
+  border-left: 4px solid var(--primary);
+  border-radius: 5px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.comentario-final-box .card-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+.comentario-final-box .card-text {
+  font-size: .83rem;
+  color: var(--text);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
 /* ── Responsivo ────────────────────────────────── */
 @media (max-width: 700px) {
   .atv-fields { grid-template-columns: 1fr; }
@@ -424,6 +509,8 @@ table.resumo .num { text-align: center; font-variant-numeric: tabular-nums; }
   table.resumo { display: block; overflow-x: auto; }
   .meta-title-bar { flex-direction: column; align-items: flex-start; }
   .meta-progress-wrap { margin-left: 0; }
+  .secao-final-grid { grid-template-columns: 1fr; }
+  .secao-final-card.full-width { grid-column: 1; }
 }
 """
 
@@ -612,6 +699,146 @@ def _render_secao4(metas: list[dict]) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Seções 5-10 — Seções finais do RAT
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _card(emoji: str, label: str, texto: str, full_width: bool = False) -> str:
+    """Renderiza um card de seção final."""
+    pending = not texto or texto.strip() == ""
+    cls = "secao-final-card full-width" if full_width else "secao-final-card"
+    texto_display = texto if not pending else "Texto não gerado para esta seção."
+    texto_cls = "card-text pending" if pending else "card-text"
+    return (
+        f'<div class="{cls}">'
+        f'<div class="card-label">{emoji} {label}</div>'
+        f'<div class="{texto_cls}">{texto_display}</div>'
+        f'</div>'
+    )
+
+
+def _render_secao5(sf: dict) -> str:
+    """Seção 5 — Resumo do período."""
+    resumo = _safe(sf.get("resumo"), "")
+    pending = not resumo
+    resumo_html = (
+        f'<div class="resumo-destaque">'
+        f'<div class="card-label">📋 Resumo executivo do período</div>'
+        f'<div class="card-text{"" if resumo else " pending"}">'
+        f'{resumo if resumo else "Texto não gerado para esta seção."}'
+        f'</div></div>'
+    )
+    return f"""
+<div class="section" id="secao5">
+  <div class="section-header">
+    <span class="sec-num">5.</span>
+    <span class="sec-title">Resumo das atividades desenvolvidas no período</span>
+  </div>
+  <div class="section-body">
+    {resumo_html}
+  </div>
+</div>
+"""
+
+
+def _render_secao6(sf: dict) -> str:
+    """Seção 6 — Dificuldades não técnicas."""
+    texto = _safe(sf.get("dificuldades_nao_tecnicas"), "")
+    return f"""
+<div class="section" id="secao6">
+  <div class="section-header">
+    <span class="sec-num">6.</span>
+    <span class="sec-title">Dificuldades não técnicas encontradas na execução do projeto</span>
+  </div>
+  <div class="section-body">
+    {_card("⚠️", "Dificuldades não técnicas", texto, full_width=True)}
+  </div>
+</div>
+"""
+
+
+def _render_secao7(sf: dict) -> str:
+    """Seção 7 — Capacitações da equipe."""
+    texto = _safe(sf.get("capacitacoes_equipe"), "")
+    return f"""
+<div class="section" id="secao7">
+  <div class="section-header">
+    <span class="sec-num">7.</span>
+    <span class="sec-title">Capacitações realizadas pela equipe do projeto</span>
+  </div>
+  <div class="section-body">
+    {_card("🎓", "Capacitações da equipe", texto, full_width=True)}
+  </div>
+</div>
+"""
+
+
+def _render_secao8(sf: dict) -> str:
+    """Seção 8 — Melhorias nas instalações físicas."""
+    texto = _safe(sf.get("melhorias_instalacoes"), "")
+    return f"""
+<div class="section" id="secao8">
+  <div class="section-header">
+    <span class="sec-num">8.</span>
+    <span class="sec-title">Melhorias nas instalações físicas</span>
+  </div>
+  <div class="section-body">
+    {_card("🏗️", "Melhorias nas instalações", texto, full_width=True)}
+  </div>
+</div>
+"""
+
+
+def _render_secao9(sf: dict) -> str:
+    """Seção 9 — Impactos internos e externos."""
+    internos = _safe(sf.get("impactos_internos"), "")
+    externos = _safe(sf.get("impactos_externos"), "")
+    return f"""
+<div class="section" id="secao9">
+  <div class="section-header">
+    <span class="sec-num">9.</span>
+    <span class="sec-title">Impactos gerados pelo projeto</span>
+  </div>
+  <div class="section-body">
+    <div class="secao-final-grid">
+      {_card("🏢", "Impactos internos", internos)}
+      {_card("🌍", "Impactos externos e sociais", externos)}
+    </div>
+  </div>
+</div>
+"""
+
+
+def _render_secao10(sf: dict) -> str:
+    """Seção 10 — Produção tecnológica, parcerias e comentário final."""
+    producao = _safe(sf.get("producao_tecnologica"), "")
+    parcerias = _safe(sf.get("parcerias_institucionais"), "")
+    comentario = _safe(sf.get("comentario_final"), "")
+    comentario_html = ""
+    if comentario:
+        comentario_html = (
+            f'<div class="comentario-final-box">'
+            f'<div class="card-label">💬 Comentário final do período</div>'
+            f'<div class="card-text">{comentario}</div>'
+            f'</div>'
+        )
+    return f"""
+<div class="section" id="secao10">
+  <div class="section-header">
+    <span class="sec-num">10.</span>
+    <span class="sec-title">Produção tecnológica, parcerias e considerações finais</span>
+  </div>
+  <div class="section-body">
+    <div class="secao-final-grid">
+      {_card("🔬", "Produção tecnológica gerada", producao)}
+      {_card("🤝", "Parcerias e articulações institucionais", parcerias)}
+    </div>
+    {comentario_html}
+  </div>
+</div>
+"""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Cabeçalho e TOC
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -637,7 +864,7 @@ def _render_header(relatorio: dict) -> str:
 """
 
 
-def _render_toc(metas: list[dict]) -> str:
+def _render_toc(metas: list[dict], tem_secoes_finais: bool = False) -> str:
     itens = [
         '<li><a href="#secao3">3. Tabela resumo</a></li>',
         '<li><a href="#secao4">4. Execução por meta</a></li>',
@@ -648,6 +875,15 @@ def _render_toc(metas: list[dict]) -> str:
         itens.append(
             f'<li><a href="#meta-{num.replace(".", "-")}">Meta {num}: {titulo}…</a></li>'
         )
+    if tem_secoes_finais:
+        itens += [
+            '<li><a href="#secao5">5. Resumo do período</a></li>',
+            '<li><a href="#secao6">6. Dificuldades</a></li>',
+            '<li><a href="#secao7">7. Capacitações</a></li>',
+            '<li><a href="#secao8">8. Instalações</a></li>',
+            '<li><a href="#secao9">9. Impactos</a></li>',
+            '<li><a href="#secao10">10. Produção / Parcerias</a></li>',
+        ]
     return f"""
 <nav class="toc">
   <div class="toc-title">Navegação rápida</div>
@@ -661,13 +897,26 @@ def _render_toc(metas: list[dict]) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def gerar_html(relatorio: dict) -> str:
-    """Gera o HTML completo (Seções 3 e 4) a partir do JSON canônico."""
+    """Gera o HTML completo (Seções 3-10) a partir do JSON canônico."""
     metas: list[dict] = relatorio.get("metas", [])
+    sf: dict = relatorio.get("secoes_finais") or {}
+    tem_secoes_finais = bool(sf)
 
     header = _render_header(relatorio)
-    toc = _render_toc(metas)
+    toc = _render_toc(metas, tem_secoes_finais=tem_secoes_finais)
     sec3 = _render_secao3(metas)
     sec4 = _render_secao4(metas)
+
+    secoes_finais_html = ""
+    if tem_secoes_finais:
+        secoes_finais_html = (
+            _render_secao5(sf)
+            + _render_secao6(sf)
+            + _render_secao7(sf)
+            + _render_secao8(sf)
+            + _render_secao9(sf)
+            + _render_secao10(sf)
+        )
 
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -683,6 +932,7 @@ def gerar_html(relatorio: dict) -> str:
   {toc}
   {sec3}
   {sec4}
+  {secoes_finais_html}
 </div>
 </body>
 </html>"""
