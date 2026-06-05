@@ -237,6 +237,31 @@ def _buscar_task(ativ_id: str, codigo: str, idx_by_id: dict, idx_by_codigo: dict
     )
 
 
+def _make_pdf_atv_sintetico(codigo: str, data_inicio: Optional[date], data_fim: Optional[date]):
+    """
+    Cria um AtividadePDF sintético contendo apenas as datas do JSON canônico.
+
+    AtividadePDF é um @dataclass com campos obrigatórios:
+        codigo, meta_codigo, mes_inicio_rel, mes_fim_rel, duracao_meses
+    e opcionais:
+        data_inicio_abs, data_fim_abs
+
+    Usamos defaults neutros (meta_codigo="0", meses=0) porque o builder
+    só consulta data_inicio_abs e data_fim_abs deste objeto.
+    """
+    from app.domain.projects.pdf_extractor import AtividadePDF
+
+    return AtividadePDF(
+        codigo=codigo,
+        meta_codigo=codigo.split(".")[0] if "." in codigo else "0",
+        mes_inicio_rel=0,
+        mes_fim_rel=0,
+        duracao_meses=0,
+        data_inicio_abs=data_inicio,
+        data_fim_abs=data_fim,
+    )
+
+
 def executar(
     termo_pdf_path: Path,
     relatorio_progresso_path: Path,
@@ -303,7 +328,6 @@ def executar(
 
     # ── 4. Monta contextos das atividades ──────────────────────────
     from app.domain.context.builders import montar_contexto
-    from app.domain.projects.pdf_extractor import AtividadePDF
     from app.domain.reporting.canonical_schemas import ProgressoAtividadeCanonico
 
     contextos = []
@@ -345,17 +369,15 @@ def executar(
                 pass
 
         # ── Datas: extrai do bloco 'datas' do JSON canônico ─────────────
-        # O builder usa pdf_atv como prioridade 2 (após ClickUp).
-        # Criamos um AtividadePDF sintético apenas com as datas do JSON
-        # para que origem_datas seja 'pdf' (=canônico) e não 'ausente'.
+        # AtividadePDF sintético para propagar datas ao builder (prioridade 2).
+        # O builder consulta apenas data_inicio_abs e data_fim_abs.
         data_inicio_canon, data_fim_canon = _get_datas_canonicas(atividade)
-        pdf_atv_sintetico: Optional[AtividadePDF] = None
+        pdf_atv_sintetico = None
         if data_inicio_canon or data_fim_canon:
-            pdf_atv_sintetico = AtividadePDF(
+            pdf_atv_sintetico = _make_pdf_atv_sintetico(
                 codigo=codigo,
-                titulo=titulo,
-                data_inicio_abs=data_inicio_canon,
-                data_fim_abs=data_fim_canon,
+                data_inicio=data_inicio_canon,
+                data_fim=data_fim_canon,
             )
 
         ctx = montar_contexto(
