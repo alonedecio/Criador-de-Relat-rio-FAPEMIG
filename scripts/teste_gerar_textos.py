@@ -300,13 +300,8 @@ def main() -> None:
         print(f"   Códigos disponíveis no relatório: {todos_codigos}")
         sys.exit(0)
 
-    resposta = input(f"\n▶ Contextos OK. Chamar a LLM para {len(contextos_preview)} atividade(s)? [s/N] ").strip().lower()
-    if resposta not in ("s", "sim", "y", "yes"):
-        print("Abortado.")
-        sys.exit(0)
-
-    # ── Executa o pipeline completo
-    print("\n▶ Executando pipeline gerar_textos_atividades...")
+    # ── Executa o pipeline completo diretamente
+    print(f"\n▶ Executando pipeline para {len(contextos_preview)} atividade(s)...")
     from app.application.use_cases import gerar_textos_atividades
 
     resultado_final = gerar_textos_atividades.executar(
