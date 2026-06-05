@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict
+from datetime import datetime, timezone
 
 from app.domain.reporting.canonical_schemas import RelatorioCanonico, ResumoProjetoCanonico
 
@@ -41,11 +42,45 @@ def _extract_status(task: dict) -> str | None:
     return _none_if_empty(status)
 
 
+def _ts_to_iso(value) -> str | None:
+    """Converte timestamp Unix em milissegundos (int ou str) para 'YYYY-MM-DD'.
+
+    Aceita:
+        - None / "" → None
+        - int/str com 13 dígitos (ms)  → divide por 1000 antes de converter
+        - int/str com 10 dígitos (s)   → usa direto
+        - string já no formato ISO     → retorna como está
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return None
+        # Já é ISO date
+        if re.match(r"^\d{4}-\d{2}-\d{2}", value):
+            return value[:10]
+        try:
+            value = int(value)
+        except ValueError:
+            return None
+    if isinstance(value, float):
+        value = int(value)
+    if isinstance(value, int):
+        # ClickUp usa ms (13 dígitos); segundos têm 10 dígitos
+        ts_s = value / 1000 if value > 9_999_999_999 else value
+        try:
+            return datetime.fromtimestamp(ts_s, tz=timezone.utc).strftime("%Y-%m-%d")
+        except (OSError, OverflowError, ValueError):
+            return None
+    return None
+
+
 def _extract_dates(task: dict) -> dict:
     return {
-        "data_inicio": task.get("startdate") or task.get("start_date"),
-        "data_fim": task.get("duedate") or task.get("due_date"),
-        "data_fim_realizado": task.get("datedone") or task.get("date_closed"),
+        "data_inicio": _ts_to_iso(task.get("startdate") or task.get("start_date")),
+        "data_fim": _ts_to_iso(task.get("duedate") or task.get("due_date")),
+        "data_fim_realizado": _ts_to_iso(task.get("datedone") or task.get("date_closed")),
     }
 
 
