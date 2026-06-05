@@ -18,7 +18,7 @@ Pré-requisitos:
     - GEMINI_API_KEY no ambiente (ou .env na raiz do projeto)
     - Arquivos esperados (defaults):
         data/input/termo_projeto.pdf
-        data/input/relatorio_com_progresso_clickup_api.json
+        data/output/relatorio_final_completo.json
         data/input/clickup_enriched_snapshot.json
 
 O script exibe:
@@ -63,7 +63,7 @@ DATA_INPUT  = ROOT / "data" / "input"
 DATA_OUTPUT = ROOT / "data" / "output"
 
 TERMO_PDF           = DATA_INPUT  / "termo_projeto.pdf"
-RELATORIO_PROGRESSO = DATA_INPUT  / "relatorio_com_progresso_clickup_api.json"
+RELATORIO_PROGRESSO = DATA_OUTPUT / "relatorio_final_completo.json"
 CLICKUP_SNAPSHOT    = DATA_INPUT  / "clickup_enriched_snapshot.json"
 OUTPUT_TESTE        = DATA_OUTPUT / "teste_textos_parcial.json"
 
