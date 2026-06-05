@@ -92,6 +92,21 @@ def _sep(titulo: str) -> None:
     logger.info("━" * 60)
 
 
+def _is_campo_preenchido(v) -> bool:
+    """Verifica se um campo de seção final está preenchido.
+    Tolera str, list, dict — qualquer valor não-vazio conta como preenchido.
+    """
+    if v is None:
+        return False
+    if isinstance(v, str):
+        return bool(v.strip())
+    if isinstance(v, list):
+        return len(v) > 0
+    if isinstance(v, dict):
+        return len(v) > 0
+    return bool(v)
+
+
 def _build_llm_client(model: str):
     """
     Instancia cliente LLM seguindo a arquitetura Ed Donner:
@@ -302,10 +317,10 @@ def etapa_5_secoes_finais(model: str) -> None:
     elapsed = time.time() - t0
 
     secoes = relatorio_completo.get("secoes_finais", {})
-    campos_preenchidos = sum(1 for v in secoes.values() if v and v.strip())
+    campos_preenchidos = sum(1 for v in secoes.values() if _is_campo_preenchido(v))
     logger.info("")
     logger.info("Etapa 5 concluída em %.1fs", elapsed)
-    logger.info("%d/9 campos de seções finais preenchidos", campos_preenchidos)
+    logger.info("%d/%d campos de seções finais preenchidos", campos_preenchidos, len(secoes))
     logger.info("Resultado final: %s", RELATORIO_COMPLETO)
 
 
