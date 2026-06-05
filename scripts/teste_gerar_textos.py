@@ -16,16 +16,16 @@ Uso:
 
 Pré-requisitos:
     - GEMINI_API_KEY no ambiente (ou .env na raiz do projeto)
-    - Arquivos em data/input/:
-        termo_projeto.pdf
-        relatorio_com_progresso.json   (ou nome configurado abaixo)
-        clickup_enriched_snapshot.json (ou nome configurado abaixo)
+    - Arquivos esperados (defaults):
+        data/input/termo_projeto.pdf
+        data/input/relatorio_com_progresso_clickup_api.json
+        data/input/clickup_enriched_snapshot.json
 
 O script exibe:
     1. Resumo do contexto montado por atividade (título, status, progresso, fontes)
     2. Textos gerados (desenvolvimento, resultados, justificativa)
     3. Status da validação e auditoria
-    4. Salva resultado parcial em output/teste_textos_parcial.json
+    4. Salva resultado parcial em data/output/teste_textos_parcial.json
 """
 from __future__ import annotations
 
@@ -56,16 +56,16 @@ logging.basicConfig(
 logger = logging.getLogger("teste_gerar_textos")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CONFIGURAÇÃO DE CAMINHOS — ajuste se seus arquivos tiverem outros nomes
+# CONFIGURAÇÃO DE CAMINHOS — estrutura real do projeto
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-DATA_DIR    = ROOT / "data" / "input"
-OUTPUT_DIR  = ROOT / "output"
+DATA_INPUT  = ROOT / "data" / "input"
+DATA_OUTPUT = ROOT / "data" / "output"
 
-TERMO_PDF              = DATA_DIR / "termo_projeto.pdf"
-RELATORIO_PROGRESSO    = DATA_DIR / "relatorio_com_progresso.json"
-CLICKUP_SNAPSHOT       = DATA_DIR / "clickup_enriched_snapshot.json"
-OUTPUT_TESTE           = OUTPUT_DIR / "teste_textos_parcial.json"
+TERMO_PDF           = DATA_INPUT  / "termo_projeto.pdf"
+RELATORIO_PROGRESSO = DATA_INPUT  / "relatorio_com_progresso_clickup_api.json"
+CLICKUP_SNAPSHOT    = DATA_INPUT  / "clickup_enriched_snapshot.json"
+OUTPUT_TESTE        = DATA_OUTPUT / "teste_textos_parcial.json"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -174,22 +174,22 @@ def main() -> None:
     parser.add_argument(
         "--relatorio",
         default=str(RELATORIO_PROGRESSO),
-        help=f"Caminho para o JSON de progresso (padrão: {RELATORIO_PROGRESSO})",
+        help=f"Caminho para o JSON de progresso (padrão: {RELATORIO_PROGRESSO.relative_to(ROOT)})",
     )
     parser.add_argument(
         "--snapshot",
         default=str(CLICKUP_SNAPSHOT),
-        help=f"Caminho para o snapshot enriquecido do ClickUp (padrão: {CLICKUP_SNAPSHOT})",
+        help=f"Caminho para o snapshot enriquecido do ClickUp (padrão: {CLICKUP_SNAPSHOT.relative_to(ROOT)})",
     )
     parser.add_argument(
         "--termo",
         default=str(TERMO_PDF),
-        help=f"Caminho para o PDF do Termo de Outorga (padrão: {TERMO_PDF})",
+        help=f"Caminho para o PDF do Termo de Outorga (padrão: {TERMO_PDF.relative_to(ROOT)})",
     )
     parser.add_argument(
         "--output",
         default=str(OUTPUT_TESTE),
-        help=f"Caminho para salvar o resultado parcial (padrão: {OUTPUT_TESTE})",
+        help=f"Caminho para salvar o resultado parcial (padrão: {OUTPUT_TESTE.relative_to(ROOT)})",
     )
     args = parser.parse_args()
 
@@ -202,6 +202,9 @@ def main() -> None:
     if not _verificar_arquivos(relatorio_path, snapshot_path, termo_path):
         print("\n❌ Arquivos de entrada ausentes. Verifique os caminhos acima.")
         sys.exit(1)
+
+    # ── Garante que o diretório de output existe
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # ── Configura cliente LLM (Gemini via base_url OpenAI)
     api_key = os.getenv("GEMINI_API_KEY")
@@ -343,7 +346,7 @@ def main() -> None:
 
     print(_separador())
     print(f"\n✅ Resultado parcial salvo em: {output_path}")
-    print("   Para inspecionar: code output/teste_textos_parcial.json\n")
+    print("   Para inspecionar: code data/output/teste_textos_parcial.json\n")
 
 
 if __name__ == "__main__":
