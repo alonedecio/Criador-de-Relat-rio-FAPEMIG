@@ -17,11 +17,14 @@ Etapas:
     5. Writer seções finais (seções 5-10 do RAT)
        → data/output/relatorio_final_completo.json
 
+    6. Renderiza HTML a partir do JSON canônico final
+       → data/output/relatorio_final_completo.html
+
 Uso:
-    # Pipeline completo
+    # Pipeline completo (todas as etapas)
     python scripts/pipeline_completo.py
 
-    # Só a partir da etapa 3 (snapshot já existe)
+    # A partir da etapa 3 (snapshot já existe)
     python scripts/pipeline_completo.py --etapa-inicio 3
 
     # Só agentes, limitado a 4 atividades de teste
@@ -29,6 +32,9 @@ Uso:
 
     # Só seções finais (atividades já geradas)
     python scripts/pipeline_completo.py --etapa-inicio 5
+
+    # Só gerar o HTML (JSON já existe)
+    python scripts/pipeline_completo.py --etapa-inicio 6
 
     # Modelo específico
     python scripts/pipeline_completo.py --etapa-inicio 4 --atividades 2.1 4.1 --model gemini-2.5-flash
@@ -78,6 +84,7 @@ ENRICHED_SNAPSHOT   = STAGED_DIR / "clickup_enriched_snapshot.json"
 RELATORIO_PROG      = OUTPUT_DIR / "relatorio_final_com_progresso.json"
 RELATORIO_TEXTOS    = OUTPUT_DIR / "relatorio_com_textos.json"
 RELATORIO_COMPLETO  = OUTPUT_DIR / "relatorio_final_completo.json"
+RELATORIO_HTML      = OUTPUT_DIR / "relatorio_final_completo.html"
 PDF_PROJETO         = INPUT_DIR  / "termo_projeto.pdf"
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
@@ -321,21 +328,48 @@ def etapa_5_secoes_finais(model: str) -> None:
     logger.info("")
     logger.info("Etapa 5 concluída em %.1fs", elapsed)
     logger.info("%d/%d campos de seções finais preenchidos", campos_preenchidos, len(secoes))
-    logger.info("Resultado final: %s", RELATORIO_COMPLETO)
+    logger.info("Resultado: %s", RELATORIO_COMPLETO)
+
+
+def etapa_6_gerar_html() -> None:
+    _sep("ETAPA 6 — Renderizar HTML final")
+
+    if not RELATORIO_COMPLETO.exists():
+        logger.error(
+            "JSON canônico não encontrado: %s\nRode a etapa 5 primeiro.",
+            RELATORIO_COMPLETO,
+        )
+        sys.exit(1)
+
+    from app.application.use_cases.gerar_html_relatorio import executar
+
+    t0 = time.time()
+    html_path = executar(
+        relatorio_path=RELATORIO_COMPLETO,
+        output_path=RELATORIO_HTML,
+    )
+    elapsed = time.time() - t0
+
+    logger.info("")
+    logger.info("Etapa 6 concluída em %.1fs", elapsed)
+    logger.info("HTML final gerado: %s", html_path)
 
 
 # ── main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Pipeline completo: ClickUp → enriquecimento → progresso → textos IA → seções finais"
+        description="Pipeline completo: ClickUp → enriquecimento → progresso → textos IA → seções finais → HTML"
     )
     parser.add_argument(
         "--etapa-inicio",
         type=int,
         default=1,
-        choices=[1, 2, 3, 4, 5],
-        help="Etapa a partir da qual iniciar (1=base, 2=enriched, 3=progresso, 4=textos, 5=seções finais)",
+        choices=[1, 2, 3, 4, 5, 6],
+        help=(
+            "Etapa a partir da qual iniciar "
+            "(1=base, 2=enriched, 3=progresso, 4=textos, 5=seções finais, 6=HTML)"
+        ),
     )
     parser.add_argument(
         "--model",
@@ -373,6 +407,8 @@ def main() -> None:
         )
     if inicio <= 5:
         etapa_5_secoes_finais(model=args.model)
+    if inicio <= 6:
+        etapa_6_gerar_html()
 
 
 if __name__ == "__main__":
