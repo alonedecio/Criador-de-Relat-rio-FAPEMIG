@@ -1,10 +1,10 @@
 """
-Writer das seções finais do RAT (seções 5 a 10).
+Writer das seções finais do RAT (tópicos 5 a 10).
 
 Diferente do writer de atividades, este writer:
   - Processa TODO o relatório de uma vez (1 chamada LLM por execução)
   - Recebe o contexto consolidado de todas as metas e atividades
-  - Devolve TextosSecaoFinal com os 9 campos das seções 5-10
+  - Devolve TextosSecaoFinal com os campos dos tópicos 5-10
 """
 from __future__ import annotations
 
@@ -39,16 +39,26 @@ def _parse_resposta(raw: str) -> TextosSecaoFinal:
         raise WriterSecoesFinalError(
             f"JSON inválido na resposta do writer de seções finais: {e}\n{texto[:400]}"
         )
+
+    # palavras_chave pode vir como lista ou string separada por vírgula
+    palavras_raw = data.get("palavras_chave", [])
+    if isinstance(palavras_raw, str):
+        palavras_chave = [p.strip() for p in palavras_raw.split(",") if p.strip()][:6]
+    elif isinstance(palavras_raw, list):
+        palavras_chave = [str(p).strip() for p in palavras_raw if str(p).strip()][:6]
+    else:
+        palavras_chave = []
+
     return TextosSecaoFinal(
-        capacitacoes_equipe       = str(data.get("capacitacoes_equipe", "")).strip(),
-        melhorias_instalacoes     = str(data.get("melhorias_instalacoes", "")).strip(),
-        dificuldades_nao_tecnicas = str(data.get("dificuldades_nao_tecnicas", "")).strip(),
-        impactos_internos         = str(data.get("impactos_internos", "")).strip(),
-        impactos_externos         = str(data.get("impactos_externos", "")).strip(),
-        producao_tecnologica      = str(data.get("producao_tecnologica", "")).strip(),
-        parcerias_institucionais  = str(data.get("parcerias_institucionais", "")).strip(),
-        comentario_final          = str(data.get("comentario_final", "")).strip(),
-        resumo                    = str(data.get("resumo", "")).strip(),
+        avaliacao_gestao         = str(data.get("avaliacao_gestao", "")).strip(),
+        desdobramentos_internos  = str(data.get("desdobramentos_internos", "")).strip(),
+        posicionamento_mercado   = str(data.get("posicionamento_mercado", "")).strip(),
+        beneficios_sociais       = str(data.get("beneficios_sociais", "")).strip(),
+        producao_tecnologica     = str(data.get("producao_tecnologica", "")).strip(),
+        parcerias_institucionais = str(data.get("parcerias_institucionais", "")).strip(),
+        comentario_final         = str(data.get("comentario_final", "")).strip(),
+        resumo                   = str(data.get("resumo", "")).strip(),
+        palavras_chave           = palavras_chave,
     )
 
 
@@ -56,9 +66,11 @@ def _montar_resumo_metas(relatorio: dict[str, Any]) -> list[dict]:
     """
     Monta lista de dicts com resumo de execução por meta,
     incluindo os textos já gerados das atividades (se existirem).
+    Compatível com estrutura canônica (chave 'metas') e legado ('itens').
     """
     resumo = []
-    for meta in relatorio.get("metas", []) + relatorio.get("itens", []):
+    todas_metas = relatorio.get("metas", []) + relatorio.get("itens", [])
+    for meta in todas_metas:
         numero = (
             meta.get("numero_meta") or meta.get("numeroMeta")
             or meta.get("numero") or "?"
@@ -68,29 +80,59 @@ def _montar_resumo_metas(relatorio: dict[str, Any]) -> list[dict]:
             or meta.get("titulo") or ""
         )
         prog_meta = meta.get("progresso") or meta.get("progressoCalculado") or {}
+
         atividades_resumo = []
         for atv in meta.get("atividades", []):
             prog = atv.get("progresso") or atv.get("progressoCalculado") or {}
-            textos = atv.get("textos_gerados") or {}
+
+            # Textos: campo canônico 'texto' ou legado 'textos_gerados'
+            textos = atv.get("texto") or atv.get("textos_gerados") or {}
+
             codigo = (
                 atv.get("numero_atividade_original") or atv.get("numeroAtividadeOriginal")
                 or atv.get("numero_atividade") or atv.get("codigo") or "?"
             )
+
+            # Percentuais: tenta campos do schema canônico primeiro
+            realizado = (
+                prog.get("realizado_percentual")
+                or prog.get("realizado_pct")
+                or prog.get("realizadoAcumulado")
+                or ""
+            )
+            previsto = (
+                prog.get("previsto_percentual")
+                or prog.get("previsto_pct")
+                or prog.get("previstoAcumulado")
+                or ""
+            )
+
             atividades_resumo.append({
-                "codigo":         codigo,
-                "titulo":         atv.get("titulo") or atv.get("titulo_original") or "",
-                "status":         atv.get("status") or prog.get("situacao_prazo") or "",
-                "previsto":       prog.get("previsto_pct") or prog.get("previstoAcumulado") or "",
-                "realizado":      prog.get("realizado_pct") or prog.get("realizadoAcumulado") or "",
+                "codigo":          codigo,
+                "titulo":          atv.get("titulo") or atv.get("titulo_original") or "",
+                "status":          atv.get("status") or prog.get("situacao_prazo") or "",
+                "previsto":        previsto,
+                "realizado":       realizado,
                 "desenvolvimento": textos.get("desenvolvimento", ""),
                 "resultados":      textos.get("resultados", ""),
                 "justificativa":   textos.get("justificativa", ""),
             })
+
         resumo.append({
             "numero":        str(numero),
             "titulo":        titulo,
-            "previsto_pct":  prog_meta.get("previsto_pct") or prog_meta.get("previstoAcumulado") or "",
-            "realizado_pct": prog_meta.get("realizado_pct") or prog_meta.get("realizadoAcumulado") or "",
+            "previsto_pct":  (
+                prog_meta.get("previsto_percentual_medio")
+                or prog_meta.get("previsto_pct")
+                or prog_meta.get("previstoAcumulado")
+                or ""
+            ),
+            "realizado_pct": (
+                prog_meta.get("realizado_percentual_medio")
+                or prog_meta.get("realizado_pct")
+                or prog_meta.get("realizadoAcumulado")
+                or ""
+            ),
             "atividades":    atividades_resumo,
         })
     return resumo
@@ -103,7 +145,7 @@ def gerar_secoes_finais(
     model: str = "gemini-2.5-flash-lite",
 ) -> TextosSecaoFinal:
     """
-    Gera os textos das seções finais do RAT em uma única chamada LLM.
+    Gera os textos dos tópicos 5-10 do RAT em uma única chamada LLM.
 
     Args:
         ctx_projeto:          ContextoProjeto extraído do termo de outorga.
@@ -112,7 +154,7 @@ def gerar_secoes_finais(
         model:                Modelo LLM.
 
     Returns:
-        TextosSecaoFinal com os 9 campos preenchidos.
+        TextosSecaoFinal com todos os campos dos tópicos 5-10.
     """
     resumo_metas = _montar_resumo_metas(relatorio_com_textos)
 

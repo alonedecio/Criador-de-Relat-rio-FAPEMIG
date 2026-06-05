@@ -63,19 +63,48 @@ class ResultadoAtividade:
 
 @dataclass
 class TextosSecaoFinal:
-    """Saída do writer para as seções finais do relatório (5-10)."""
-    # Seção 5 — Avaliação da gestão
-    capacitacoes_equipe:       str = ""
-    melhorias_instalacoes:     str = ""
-    dificuldades_nao_tecnicas: str = ""
-    # Seção 6 — Impactos
-    impactos_internos:         str = ""
-    impactos_externos:         str = ""
-    # Seção 7 — Produção tecnológica
-    producao_tecnologica:      str = ""
-    # Seção 8 — Parcerias
-    parcerias_institucionais:  str = ""
-    # Seção 9 — Comentário final
-    comentario_final:          str = ""
-    # Seção 10 — Resumo
-    resumo:                    str = ""
+    """
+    Saída do writer para as seções finais do RAT FAPEMIG (tópicos 5 a 10).
+
+    Estrutura alinhada ao modelo oficial do RAT:
+      5. Avaliação da gestão do projeto
+      6. Impactos internos e externos do projeto  (3 sub-campos)
+      7. Produção tecnológica
+      8. Parceria institucional
+      9. Comentário final
+      10. Resumo + palavras-chave
+    """
+    # ── Tópico 5 — Avaliação da gestão do projeto ─────────────────────────
+    # Texto único consolidando: capacitações realizadas, melhorias físicas
+    # e dificuldades não técnicas enfrentadas no período.
+    avaliacao_gestao: str = ""
+
+    # ── Tópico 6 — Impactos internos e externos ───────────────────────────
+    # Sub-campo A: desdobramentos internos (mudanças organizacionais,
+    # faturamento, processos internos da instituição e parceiros)
+    desdobramentos_internos: str = ""
+    # Sub-campo B: posicionamento de mercado (mudanças de posicionamento
+    # da instituição perante mercado/sociedade proporcionadas pelo projeto)
+    posicionamento_mercado: str = ""
+    # Sub-campo C: benefícios sociais trazidos pelo projeto
+    beneficios_sociais: str = ""
+
+    # ── Tópico 7 — Produção tecnológica ──────────────────────────────────
+    # Produtos, protótipos, patentes, processos, metodologias que surgiram
+    # e não haviam sido previstos como indicadores físicos.
+    producao_tecnologica: str = ""
+
+    # ── Tópico 8 — Parceria institucional ────────────────────────────────
+    # Articulações institucionais mantidas, resultados transferidos,
+    # contribuição de cada parceiro.
+    parcerias_institucionais: str = ""
+
+    # ── Tópico 9 — Comentário final ──────────────────────────────────────
+    # Observações relevantes que não se aplicam aos outros campos.
+    comentario_final: str = ""
+
+    # ── Tópico 10 — Resumo ───────────────────────────────────────────────
+    # Resumo com até 200 palavras para divulgação externa.
+    resumo: str = ""
+    # Até 6 palavras-chave que caracterizam os resultados.
+    palavras_chave: list[str] = field(default_factory=list)
