@@ -17,6 +17,7 @@ REGRA GERAL DE realizado_percentual:
 
   4. Sem itens de ação + status == "em_progresso" + dentro do prazo
        → percentual de tempo decorrido entre data_inicio e data_fim
+         PISO EM 0%: se agora < data_inicio (atividade futura), retorna 0%.
 
   5. Sem itens de ação + status == "em_progresso" + atrasada (passou da data_fim)
        → percentual baseado em (agora - inicio) / (fim - inicio),
@@ -33,6 +34,11 @@ DATAS:
 
   Isso é necessário porque muitas tasks no ClickUp não têm datas preenchidas,
   sendo as datas extraídas do PDF do projeto a fonte canônica nesses casos.
+
+AGREGAÇÃO DE META-PAI:
+  calcular_progresso_meta() computa a média simples do realizado_percentual
+  e do previsto_percentual de todas as atividades-filhas com valor definido.
+  Deve ser chamada no script de ingestão para popular progresso_calculado_meta.
 
 Não acessa o ClickUp nem faz I/O — pura lógica de domínio.
 """
@@ -93,6 +99,8 @@ def _percentual_cronograma(
     Percentual de tempo decorrido dentro do intervalo planejado.
 
     Retorna None se datas forem inválidas (nulas ou sem duração real).
+    Garante piso em 0%: quando agora < inicio (atividade futura ou data
+    malformada no ClickUp), retorna 0.0 em vez de valor negativo.
     Quando atrasada (agora > fim), pode ultrapassar 100% — o chamador
     decide se capeia ou não dependendo do contexto.
     """
@@ -103,7 +111,8 @@ def _percentual_cronograma(
     agora = agora or datetime.now(tz=timezone.utc)
     agora_ms = agora.timestamp() * 1000
     ratio = (agora_ms - inicio_ms) / (fim_ms - inicio_ms)
-    return round(ratio * 100, 2)
+    # Piso em 0%: evita valores negativos quando agora < inicio_ms
+    return round(max(0.0, ratio) * 100, 2)
 
 
 def _percentual_checklists(task: ClickUpTaskEnriched) -> Optional[float]:
@@ -167,6 +176,71 @@ def _situacao_prazo(
     if fim_ms is None:
         return "nao_iniciada_sem_prazo"
     return "nao_iniciada_atrasada" if atrasada else "nao_iniciada_no_prazo"
+
+
+# ── agregação de meta-pai ─────────────────────────────────────────────────────
+
+def calcular_progresso_meta(atividades: list[dict]) -> dict:
+    """
+    Agrega o progresso das atividades-filhas para compor o indicador da meta-pai.
+
+    Calcula a média simples de realizado_percentual e previsto_percentual
+    de todas as atividades que possuem esses campos definidos (não-None).
+
+    Tolerante às três chaves possíveis para o bloco de progresso:
+      - 'progresso_calculado'  → gerado pelo script legado dos notebooks
+      - 'progresso'            → estrutura canônica nova
+      - 'progressoCalculado'   → variante camelCase
+
+    Args:
+        atividades: lista de dicts de atividade do relatório (qualquer estrutura).
+
+    Returns:
+        Dict com 'realizado_percentual' e 'previsto_percentual' (float ou None).
+
+    Exemplo:
+        >>> metas = relatorio["relatorio"]["secoes_fixas"][SECAO_KEY]["itens_meta_atividade"]
+        >>> for meta in metas:
+        ...     meta["progresso_calculado_meta"] = calcular_progresso_meta(meta["atividades"])
+    """
+    realizados: list[float] = []
+    previstos: list[float] = []
+
+    for atv in atividades:
+        prog = (
+            atv.get("progresso_calculado")
+            or atv.get("progresso")
+            or atv.get("progressoCalculado")
+            or {}
+        )
+        r = prog.get("realizado_percentual")
+        p = prog.get("previsto_percentual")
+
+        if r is not None:
+            try:
+                realizados.append(float(r))
+            except (TypeError, ValueError):
+                pass
+        if p is not None:
+            try:
+                previstos.append(float(p))
+            except (TypeError, ValueError):
+                pass
+
+    realizado_media = round(sum(realizados) / len(realizados), 1) if realizados else None
+    previsto_media  = round(sum(previstos)  / len(previstos),  1) if previstos  else None
+
+    logger.debug(
+        "calcular_progresso_meta: %d atividades → realizado=%.1f%% previsto=%.1f%%",
+        len(atividades),
+        realizado_media or 0.0,
+        previsto_media  or 0.0,
+    )
+
+    return {
+        "realizado_percentual": realizado_media,
+        "previsto_percentual":  previsto_media,
+    }
 
 
 # ── função pública ────────────────────────────────────────────────────────────
@@ -245,6 +319,7 @@ def calcular_progresso(
 
         else:
             # Regras 4 e 5: em progresso sem checklists → calcular por tempo
+            # _percentual_cronograma já garante piso em 0% internamente
             pct_tempo = _percentual_cronograma(ini_ms, fim_ms, agora)
 
             if pct_tempo is None:
@@ -255,6 +330,7 @@ def calcular_progresso(
                 realizado_pct = min(pct_tempo, 100.0)
 
     # ── previsto_percentual ───────────────────────────────────────────────────
+    # _percentual_cronograma já garante piso em 0% internamente
     previsto_pct = _percentual_cronograma(ini_ms, fim_ms, agora)
     if previsto_pct is not None:
         previsto_pct = min(previsto_pct, 100.0)
