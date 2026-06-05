@@ -24,6 +24,18 @@ Indexação do snapshot:
       - idx_by_codigo: código da atividade (ex: '2.1') → ClickUpTaskEnriched
                        Resolve o campo 'codigo' do snapshot se disponível.
 
+Estruturas de JSON suportadas em _iter_atividades:
+    1. Canônica (Pydantic snake_case):
+         { "metas": [ { "atividades": [...] } ] }
+    2. Legado notebooks (relatorio_com_progresso_clickup_api.json):
+         { "relatorio": { "secoes_fixas": {
+             "3_tabela_resumo_execucao_cronograma_fisico": {
+                 "itens_meta_atividade": [ { "atividades": [...] } ]
+             }
+         } } }
+    3. Alternativa legado simples:
+         { "itens": [ { "atividades": [...] } ] }
+
 Arquitetura LLM:
     Recebe llm_client já instanciado pelo pipeline_completo.py
     (openai.OpenAI com base_url Gemini — padrão Ed Donner).
@@ -69,21 +81,64 @@ def _get_titulo_canonical(atividade: dict, codigo: str) -> str:
 
 
 def _get_progresso(atividade: dict):
+    """
+    Lê o bloco de progresso da atividade tolerando as três chaves possíveis:
+      - 'progresso_calculado'  → gerado pelo script legado dos notebooks
+      - 'progresso'            → estrutura canônica nova
+      - 'progressoCalculado'   → variante camelCase
+    """
     return (
-        atividade.get("progresso")
+        atividade.get("progresso_calculado")
+        or atividade.get("progresso")
         or atividade.get("progressoCalculado")
     )
 
 
 def _iter_atividades(relatorio: dict):
     """
-    Itera sobre todas as atividades do relatório canônico tolerando
-    tanto a estrutura 'metas' (Pydantic snake_case) quanto 'itens' (legado).
+    Itera sobre todas as atividades do relatório tolerando 3 estruturas:
+
+    1. Canônica nova (Pydantic snake_case):
+         relatorio["metas"][*]["atividades"]
+
+    2. Legado notebooks (relatorio_com_progresso_clickup_api.json):
+         relatorio["relatorio"]["secoes_fixas"]
+                  ["3_tabela_resumo_execucao_cronograma_fisico"]
+                  ["itens_meta_atividade"][*]["atividades"]
+
+    3. Alternativa legado simples:
+         relatorio["itens"][*]["atividades"]
     """
+    encontrou = False
+
+    # ── Estrutura 1: canônica ────────────────────────────────────────────
     for meta in relatorio.get("metas", []):
-        yield from meta.get("atividades", [])
+        for atv in meta.get("atividades", []):
+            encontrou = True
+            yield atv
+
+    # ── Estrutura 2: legado notebooks ────────────────────────────────────
+    relatorio_inner = relatorio.get("relatorio", {})
+    secoes = relatorio_inner.get("secoes_fixas", {})
+    tabela = secoes.get("3_tabela_resumo_execucao_cronograma_fisico", {})
+    for meta in tabela.get("itens_meta_atividade", []):
+        for atv in meta.get("atividades", []):
+            encontrou = True
+            yield atv
+
+    # ── Estrutura 3: alternativa legado simples ──────────────────────────
     for item in relatorio.get("itens", []):
-        yield from item.get("atividades", [])
+        for atv in item.get("atividades", []):
+            encontrou = True
+            yield atv
+
+    if not encontrou:
+        chaves = list(relatorio.keys())
+        logger.warning(
+            "_iter_atividades: nenhuma atividade encontrada. "
+            "Chaves raiz do JSON: %s",
+            chaves,
+        )
 
 
 def _build_snapshot_indexes(
@@ -198,6 +253,14 @@ def executar(
     with open(relatorio_progresso_path, "r", encoding="utf-8") as f:
         relatorio = json.load(f)
 
+    # ── Diagnóstico da estrutura do JSON ────────────────────────────────
+    todos_codigos = [_get_codigo(atv) for atv in _iter_atividades(relatorio)]
+    logger.info(
+        "Relatório carregado: %d atividades encontradas (chaves raiz: %s)",
+        len(todos_codigos),
+        list(relatorio.keys()),
+    )
+
     # ── 3. Carrega e indexa snapshot enriquecido do ClickUp ─────────────
     logger.info("Carregando snapshot ClickUp enriquecido: %s", clickup_snapshot_path)
     with open(clickup_snapshot_path, "r", encoding="utf-8") as f:
@@ -266,7 +329,13 @@ def executar(
         )
         contextos.append(ctx)
 
-    logger.info("%d contextos de atividade montados.", len(contextos))
+    logger.info(
+        "%d contextos montados (filtro=%s). %d/%d com task ClickUp.",
+        len(contextos),
+        atividades_filtro or "nenhum",
+        len(contextos) - len(codigos_sem_task),
+        len(contextos),
+    )
     if codigos_sem_task:
         logger.warning(
             "%d atividade(s) sem task no snapshot (sem contexto ClickUp): %s",
@@ -276,13 +345,12 @@ def executar(
         logger.info("Códigos processados: %s", codigos_encontrados)
 
     if not contextos:
-        todos = [_get_codigo(atv) for atv in _iter_atividades(relatorio)]
         logger.warning(
             "Nenhum contexto montado.\n"
-            "  Filtro solicitado : %s\n"
-            "  Códigos no relatório: %s",
+            "  Filtro solicitado  : %s\n"
+            "  Todos os códigos   : %s",
             atividades_filtro,
-            sorted(set(todos))[:20],
+            sorted(set(todos_codigos))[:20],
         )
 
     # ── 5. Executa pipeline de agentes ───────────────────────────────
