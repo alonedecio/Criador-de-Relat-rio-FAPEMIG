@@ -8,7 +8,7 @@ from app.domain.reporting.canonical_schemas import RelatorioCanonico, ResumoProj
 logger = logging.getLogger(__name__)
 
 PADRAO_META = re.compile(r"^Meta\s+(\d+)\s*-\s*(.+)$", re.IGNORECASE)
-# Aceita hífen simples (-), en-dash (–) e em-dash (—)
+# Aceita hífem simples (-), en-dash (–) e em-dash (—)
 PADRAO_ATIVIDADE = re.compile(r"^(\d+)\.(\d+)\s*[-\u2013\u2014]\s*(.+)$")
 PADRAO_NUMERO_ATIVIDADE = re.compile(r"^(\d+)\.(\d+)$")
 
@@ -31,10 +31,12 @@ def _extract_task_id(task: dict) -> str:
 
 
 def _extract_parent_id(task: dict) -> str | None:
-    parent_id = _none_if_empty(task.get("parent"))
-    if parent_id:
-        return parent_id
-    return _none_if_empty(task.get("toplevelparent"))
+    # CORRIGIDO: usa APENAS o campo 'parent' para vincular atividades a metas.
+    # Antes havia um fallback para 'toplevelparent', que aponta para o
+    # espaco/lista do ClickUp -- nao para a Meta. Isso causava vinculos
+    # fantasmas e atividades duplicadas quando o id do toplevelparent
+    # coincidia com algum meta_id no payload.
+    return _none_if_empty(task.get("parent"))
 
 
 def _extract_status(task: dict) -> str | None:
@@ -137,6 +139,12 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
     metas_por_id: dict[str, dict] = {}
     atividades_por_meta_id: dict[str, list] = defaultdict(list)
 
+    # CORRIGIDO: deduplicacao defensiva por task_id.
+    # Garante que cada task seja processada no maximo uma vez,
+    # independente do estado do arquivo em disco (pode estar contaminado
+    # com entradas acumuladas de execucoes anteriores com bug).
+    seen_task_ids: set[str] = set()
+
     # --- Primeira passagem: identificar Metas pelo nome ---
     for task in tasks:
         base = _get_base_fields(task)
@@ -157,6 +165,12 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
         if _normalize_str(nome).startswith("Meta 0"):
             continue
 
+        # Deduplica: se a mesma meta aparecer mais de uma vez, usa a primeira
+        if meta_id in seen_task_ids:
+            logger.debug("mapper: meta_id '%s' duplicada no payload — ignorando extra", meta_id)
+            continue
+        seen_task_ids.add(meta_id)
+
         metas_por_id[meta_id] = {
             "item": str(numero_meta),
             "meta_id_original": meta_id,
@@ -171,7 +185,7 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
 
     logger.info("mapper: %d metas identificadas nas tasks", len(metas_por_id))
 
-    # --- Segunda passagem: identificar Atividades cujo parent é uma Meta conhecida ---
+    # --- Segunda passagem: identificar Atividades cujo parent e uma Meta conhecida ---
     for task in tasks:
         base = _get_base_fields(task)
         parent_id = _extract_parent_id(base)
@@ -181,6 +195,15 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
         task_id = _extract_task_id(base)
         if not task_id:
             continue
+
+        # Deduplica: se a mesma atividade aparecer mais de uma vez, usa a primeira
+        if task_id in seen_task_ids:
+            logger.debug(
+                "mapper: task_id '%s' duplicada no payload — ignorando extra",
+                task_id,
+            )
+            continue
+        seen_task_ids.add(task_id)
 
         nome = _extract_task_name(base)
         custom_fields = _extract_custom_fields(base)
@@ -235,12 +258,10 @@ def to_report_base_from_clickup(payload: dict) -> RelatorioCanonico:
     for meta_id, meta in metas_por_id.items():
         atividades = sorted(atividades_por_meta_id.get(meta_id, []), key=_atividade_sort_key)
 
-        # CORRIGIDO: antes descartava silenciosamente metas sem atividades.
-        # Agora emite WARNING para facilitar diagnóstico de nomes fora do padrão.
         if not atividades:
             logger.warning(
                 "mapper: meta '%s' (id=%s) sem atividades reconhecidas — "
-                "verifique se os nomes das sub-tasks seguem o padrão 'N.N - Título'.",
+                "verifique se os nomes das sub-tasks seguem o padrao 'N.N - Titulo'.",
                 meta.get("meta_nome"), meta_id,
             )
             continue
