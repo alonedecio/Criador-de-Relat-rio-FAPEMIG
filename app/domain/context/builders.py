@@ -30,7 +30,7 @@ class ContextoAtividade:
     checklists:    list[dict]     = field(default_factory=list)
     responsaveis:  list[str]      = field(default_factory=list)
     anexos:        list           = field(default_factory=list)
-    customfields:  list[dict]     = field(default_factory=list)  # itens de ação e campos extras
+    customfields:  list[dict]     = field(default_factory=list)
     status:        str            = "pendente"
     fontes:        list[FonteDado] = field(default_factory=list)
     task_id:       Optional[str]  = None
@@ -44,6 +44,20 @@ def _ms_to_date(ms: Optional[int]) -> Optional[date]:
         return None
     from datetime import datetime, timezone
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).date()
+
+
+def _parse_date(valor) -> Optional[date]:
+    """Converte str ISO (YYYY-MM-DD) ou date para date. Retorna None se inválido."""
+    if valor is None:
+        return None
+    if isinstance(valor, date):
+        return valor
+    if isinstance(valor, str):
+        try:
+            return date.fromisoformat(valor[:10])
+        except ValueError:
+            return None
+    return None
 
 
 def _extrair_responsaveis(task: ClickUpTaskEnriched) -> list[str]:
@@ -119,6 +133,7 @@ def montar_contexto(
     data_fim:    Optional[date] = None
     origem_datas = "ausente"
 
+    # ── Prioridade 1: datas do ClickUp (campo planejado) ─────────────────
     if task:
         data_inicio = _ms_to_date(task.data_planejada_inicio_ms)
         data_fim    = _ms_to_date(task.data_planejada_fim_ms)
@@ -127,6 +142,7 @@ def montar_contexto(
             fontes.append(_fonte("data_inicio", "clickup", str(data_inicio)))
             fontes.append(_fonte("data_fim",    "clickup", str(data_fim)))
 
+    # ── Prioridade 2: datas do PDF (AtividadePDF) ────────────────────────
     if pdf_atv and not (data_inicio and data_fim):
         if pdf_atv.data_inicio_abs:
             data_inicio  = pdf_atv.data_inicio_abs
@@ -136,6 +152,20 @@ def montar_contexto(
             data_fim     = pdf_atv.data_fim_abs
             origem_datas = "pdf"
             fontes.append(_fonte("data_fim", "pdf", str(data_fim)))
+
+    # ── Prioridade 3: datas do ProgressoAtividadeCanonico (JSON canônico) ─
+    if progresso and not (data_inicio and data_fim):
+        d_ini = _parse_date(getattr(progresso, "data_inicio", None))
+        d_fim = _parse_date(getattr(progresso, "data_fim", None))
+        if d_ini or d_fim:
+            if not data_inicio and d_ini:
+                data_inicio  = d_ini
+                origem_datas = "progresso"
+                fontes.append(_fonte("data_inicio", "progresso", str(d_ini)))
+            if not data_fim and d_fim:
+                data_fim     = d_fim
+                origem_datas = "progresso"
+                fontes.append(_fonte("data_fim", "progresso", str(d_fim)))
 
     if not (data_inicio or data_fim):
         fontes.append(_fonte("data_inicio", "ausente", ""))
