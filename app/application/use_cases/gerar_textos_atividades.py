@@ -11,6 +11,7 @@ Orquestra todo o pipeline de ponta a ponta:
     3. Para cada atividade do relatório:
        → busca a task enriquecida do ClickUp pelo task_id (atividade_id) OU pelo código da atividade
        → título da atividade: usa task.base.name (ClickUp) quando task encontrada
+       → extrai datas de atividade['datas'] (JSON canônico) como fallback
        → monta o ContextoAtividade (builder existente)
 
     4. Executa AIService.processar_relatorio()
@@ -45,6 +46,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 from pathlib import Path
 from typing import Optional
 
@@ -94,6 +96,39 @@ def _get_progresso(atividade: dict):
     )
 
 
+def _parse_date_str(valor) -> Optional[date]:
+    """Converte str ISO (YYYY-MM-DD) ou date em date. Retorna None se inválido."""
+    if valor is None:
+        return None
+    if isinstance(valor, date):
+        return valor
+    if isinstance(valor, str):
+        try:
+            return date.fromisoformat(valor[:10])
+        except ValueError:
+            return None
+    return None
+
+
+def _get_datas_canonicas(atividade: dict):
+    """
+    Extrai data_inicio e data_fim do bloco 'datas' do JSON canônico.
+
+    Estrutura esperada (AtividadeCanonica):
+        atividade['datas']['data_inicio']  # ex: '2025-09-01'
+        atividade['datas']['data_fim']     # ex: '2025-10-31'
+
+    Retorna (data_inicio, data_fim) como objetos date ou None.
+    """
+    datas_raw = atividade.get("datas") or {}
+    if not isinstance(datas_raw, dict):
+        return None, None
+    return (
+        _parse_date_str(datas_raw.get("data_inicio")),
+        _parse_date_str(datas_raw.get("data_fim")),
+    )
+
+
 def _iter_atividades(relatorio: dict):
     """
     Itera sobre todas as atividades do relatório tolerando 3 estruturas:
@@ -111,13 +146,13 @@ def _iter_atividades(relatorio: dict):
     """
     encontrou = False
 
-    # ── Estrutura 1: canônica ────────────────────────────────────────────
+    # ── Estrutura 1: canônica ──────────────────────────────────────
     for meta in relatorio.get("metas", []):
         for atv in meta.get("atividades", []):
             encontrou = True
             yield atv
 
-    # ── Estrutura 2: legado notebooks ────────────────────────────────────
+    # ── Estrutura 2: legado notebooks ────────────────────────────
     relatorio_inner = relatorio.get("relatorio", {})
     secoes = relatorio_inner.get("secoes_fixas", {})
     tabela = secoes.get("3_tabela_resumo_execucao_cronograma_fisico", {})
@@ -126,7 +161,7 @@ def _iter_atividades(relatorio: dict):
             encontrou = True
             yield atv
 
-    # ── Estrutura 3: alternativa legado simples ──────────────────────────
+    # ── Estrutura 3: alternativa legado simples ──────────────────────
     for item in relatorio.get("itens", []):
         for atv in item.get("atividades", []):
             encontrou = True
@@ -155,13 +190,11 @@ def _build_snapshot_indexes(
     """
     from app.domain.clickup.models import ClickUpEnrichedSnapshot, ClickUpTaskEnriched
 
-    # Tenta deserializar via envelope tipado
     try:
         if isinstance(snapshot_raw, dict) and "tasks" in snapshot_raw:
             envelope = ClickUpEnrichedSnapshot(**snapshot_raw)
             tasks = envelope.tasks
         elif isinstance(snapshot_raw, list):
-            # lista direta de tasks enriquecidas
             tasks = []
             for item in snapshot_raw:
                 try:
@@ -179,11 +212,8 @@ def _build_snapshot_indexes(
     idx_by_codigo: dict = {}
 
     for task in tasks:
-        # Índice primário: task_id
         if task.task_id:
             idx_by_id[task.task_id] = task
-
-        # Índice secundário: campo 'codigo' explícito no snapshot (se existir)
         codigo_snapshot = getattr(task, "codigo", None)
         if codigo_snapshot:
             idx_by_codigo[str(codigo_snapshot)] = task
@@ -234,7 +264,7 @@ def executar(
     Returns:
         Dicionário do relatório final com textos e auditoria.
     """
-    # ── 1. Carrega e extrai o Termo de Outorga ──────────────────────────
+    # ── 1. Carrega e extrai o Termo de Outorga ──────────────────────
     from app.domain.projects.pdf_reader import ler_pdf_projeto
     from app.domain.projects.termo_outorga import extrair_contexto_projeto
 
@@ -248,12 +278,11 @@ def executar(
         len(ctx_projeto.objetivos_especificos),
     )
 
-    # ── 2. Carrega o relatório canônico com progresso ───────────────────
+    # ── 2. Carrega o relatório canônico com progresso ───────────────
     logger.info("Carregando relatório de progresso: %s", relatorio_progresso_path)
     with open(relatorio_progresso_path, "r", encoding="utf-8") as f:
         relatorio = json.load(f)
 
-    # ── Diagnóstico da estrutura do JSON ────────────────────────────────
     todos_codigos = [_get_codigo(atv) for atv in _iter_atividades(relatorio)]
     logger.info(
         "Relatório carregado: %d atividades encontradas (chaves raiz: %s)",
@@ -261,7 +290,7 @@ def executar(
         list(relatorio.keys()),
     )
 
-    # ── 3. Carrega e indexa snapshot enriquecido do ClickUp ─────────────
+    # ── 3. Carrega e indexa snapshot enriquecido do ClickUp ──────────
     logger.info("Carregando snapshot ClickUp enriquecido: %s", clickup_snapshot_path)
     with open(clickup_snapshot_path, "r", encoding="utf-8") as f:
         snapshot_raw = json.load(f)
@@ -272,8 +301,9 @@ def executar(
         len(idx_by_id),
     )
 
-    # ── 4. Monta contextos das atividades ──────────────────────────────
+    # ── 4. Monta contextos das atividades ──────────────────────────
     from app.domain.context.builders import montar_contexto
+    from app.domain.projects.pdf_extractor import AtividadePDF
     from app.domain.reporting.canonical_schemas import ProgressoAtividadeCanonico
 
     contextos = []
@@ -289,7 +319,6 @@ def executar(
 
         codigos_encontrados.append(codigo)
 
-        # Busca com duplo índice: task_id primeiro, código como fallback
         task = _buscar_task(
             ativ_id=ativ_id,
             codigo=codigo,
@@ -305,12 +334,7 @@ def executar(
                 codigo, ativ_id or "—",
             )
 
-        # Título: usa base.name do ClickUp quando task encontrada
-        # Isso garante que o título exibido no relatório é o título original do ClickUp
-        if task is not None:
-            titulo = task.base.name
-        else:
-            titulo = _get_titulo_canonical(atividade, codigo)
+        titulo = task.base.name if task is not None else _get_titulo_canonical(atividade, codigo)
 
         prog_raw = _get_progresso(atividade)
         progresso: Optional[ProgressoAtividadeCanonico] = None
@@ -320,11 +344,25 @@ def executar(
             except Exception:
                 pass
 
+        # ── Datas: extrai do bloco 'datas' do JSON canônico ─────────────
+        # O builder usa pdf_atv como prioridade 2 (após ClickUp).
+        # Criamos um AtividadePDF sintético apenas com as datas do JSON
+        # para que origem_datas seja 'pdf' (=canônico) e não 'ausente'.
+        data_inicio_canon, data_fim_canon = _get_datas_canonicas(atividade)
+        pdf_atv_sintetico: Optional[AtividadePDF] = None
+        if data_inicio_canon or data_fim_canon:
+            pdf_atv_sintetico = AtividadePDF(
+                codigo=codigo,
+                titulo=titulo,
+                data_inicio_abs=data_inicio_canon,
+                data_fim_abs=data_fim_canon,
+            )
+
         ctx = montar_contexto(
             codigo=codigo,
             titulo=titulo,
             task=task,
-            pdf_atv=None,
+            pdf_atv=pdf_atv_sintetico,
             progresso=progresso,
         )
         contextos.append(ctx)
@@ -353,7 +391,7 @@ def executar(
             sorted(set(todos_codigos))[:20],
         )
 
-    # ── 5. Executa pipeline de agentes ───────────────────────────────
+    # ── 5. Executa pipeline de agentes ────────────────────────────
     from app.domain.ai.service import AIService
 
     service = AIService(
@@ -364,7 +402,7 @@ def executar(
     )
     relatorio_final = service.processar_relatorio(relatorio, contextos)
 
-    # ── 6. Salva resultado ──────────────────────────────────────────
+    # ── 6. Salva resultado ───────────────────────────────────────
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(relatorio_final, f, ensure_ascii=False, indent=2)
